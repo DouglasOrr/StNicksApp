@@ -1,39 +1,42 @@
 package uk.org.stnickschurch.stnicksapp;
 
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.TabLayout;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
-
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
-import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-
 import android.widget.TextView;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import uk.org.stnickschurch.stnicksapp.core.Downloader;
 
 public class Home extends AppCompatActivity {
     @BindView(R.id.toolbar) Toolbar mToolbar;
     @BindView(R.id.container) ViewPager mViewPager;
     @BindView(R.id.tabs) TabLayout mTabLayout;
 
+    private Downloader mDownloader;
+    public Downloader downloader() {
+        return mDownloader;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        mDownloader = new Downloader(this);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
         ButterKnife.bind(this);
-
         setSupportActionBar(mToolbar);
         mViewPager.setAdapter(new SectionsPagerAdapter(getSupportFragmentManager()));
         mTabLayout.setupWithViewPager(mViewPager);
@@ -54,17 +57,6 @@ public class Home extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    public static class MediaFragment extends Fragment {
-        @Override
-        public View onCreateView(@NonNull LayoutInflater inflater,
-                                 ViewGroup container,
-                                 Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.fragment_home, container, false);
-            rootView.<TextView>findViewById(R.id.section_label).setText(R.string.section_media);
-            return rootView;
-        }
     }
 
     public static class CalendarFragment extends Fragment {

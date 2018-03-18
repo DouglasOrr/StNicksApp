@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@color/colorBackground"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:orientation="vertical"
+    tools:context="uk.org.stnickschurch.stnicksapp.MediaFragment">
+
+    <com.google.android.exoplayer2.ui.PlayerControlView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:id="@+id/player_media"
+        android:visibility="gone"
+        app:show_timeout="0"
+        app:show_shuffle_button="false"
+        app:repeat_toggle_modes="none">
+    </com.google.android.exoplayer2.ui.PlayerControlView>
+
+    <android.support.v7.widget.RecyclerView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/recyclerview_media"
+        android:scrollbars="vertical">
+    </android.support.v7.widget.RecyclerView>
+
+</LinearLayout>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/pad_list"
+    android:id="@+id/item_sermon">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:id="@+id/text_sermon_title">
+    </TextView>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:id="@+id/text_sermon_passage">
+    </TextView>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/text_sermon_title"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="@dimen/pad_list_cell"
+        android:id="@+id/text_sermon_speaker">
+    </TextView>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/text_sermon_passage"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="@dimen/pad_list_cell"
+        android:id="@+id/text_sermon_time">
+    </TextView>
+
+</RelativeLayout>

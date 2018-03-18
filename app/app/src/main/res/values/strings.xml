@@ -4,4 +4,6 @@
     <string name="section_media">Media</string>
     <string name="section_calendar">Calendar</string>
     <string name="section_prayer">Prayer</string>
+
+    <string name="sermons_list">https://stnicksapp.blob.core.windows.net/sermons/test.json</string>
 </resources>
