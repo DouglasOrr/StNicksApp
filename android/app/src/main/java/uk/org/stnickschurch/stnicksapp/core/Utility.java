@@ -5,8 +5,8 @@ import android.support.v7.recyclerview.extensions.ListAdapter;
 import android.support.v7.util.DiffUtil;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.view.ViewGroup;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
@@ -15,14 +15,14 @@ import com.google.common.base.Objects;
 
 import org.json.JSONObject;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
-import io.reactivex.Observer;
-import io.reactivex.disposables.Disposable;
-import uk.org.stnickschurch.stnicksapp.MediaFragment;
+import io.reactivex.functions.Consumer;
 
 public class Utility {
     /**
@@ -30,7 +30,9 @@ public class Utility {
      *
      * @see JsonObjectRequest
      */
-    public static Observable<JSONObject> request(final RequestQueue queue, final int method, final String url, final JSONObject request) {
+    public static Observable<JSONObject> request(
+            final RequestQueue queue, final int method, final String url,
+            final JSONObject request, final Map<String, String> headers) {
         return Observable.create(new ObservableOnSubscribe<JSONObject>() {
             @Override
             public void subscribe(final ObservableEmitter<JSONObject> emitter) throws Exception {
@@ -49,7 +51,12 @@ public class Utility {
                             emitter.onError(error);
                         }
                     }
-                ));
+                ) {
+                    @Override
+                    public Map<String, String> getHeaders() throws AuthFailureError {
+                        return headers == null ? Collections.<String, String> emptyMap() : headers;
+                    }
+                });
             }
         });
     }
@@ -64,26 +71,14 @@ public class Utility {
     }
 
     public static abstract class ObserverListAdapter<T, TH extends RecyclerView.ViewHolder>
-            extends ListAdapter<T, TH> implements Observer<List<T>> {
+            extends ListAdapter<T, TH> implements Consumer<List<T>> {
         protected ObserverListAdapter(@NonNull DiffUtil.ItemCallback<T> diffCallback) {
             super(diffCallback);
         }
-
         @Override
-        public void onSubscribe(Disposable d) { }
-
-        @Override
-        public void onNext(List<T> items) {
+        public void accept(List<T> items) {
             submitList(items);
         }
-
-        @Override
-        public void onError(Throwable e) {
-            log("Observe error %s", e);
-        }
-
-        @Override
-        public void onComplete() { }
     }
 
     /**

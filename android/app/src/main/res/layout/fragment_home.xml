@@ -7,7 +7,7 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     android:background="@color/colorBackground"
-    tools:context="uk.org.stnickschurch.stnicksapp.Home$CalendarFragment">
+    tools:context=".Home$CalendarFragment">
 
     <TextView
         android:id="@+id/section_label"

@@ -10,15 +10,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.google.android.exoplayer2.ui.PlayerControlView;
-
 import org.joda.time.format.DateTimeFormat;
 
 import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import io.reactivex.functions.Consumer;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Function;
 import uk.org.stnickschurch.stnicksapp.core.Downloader;
 import uk.org.stnickschurch.stnicksapp.core.Sermon;
@@ -46,7 +44,7 @@ public class MediaFragment extends Fragment {
             mRoot.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    ((Home) mRoot.getContext()).downloader().playing.onNext(sermon);
+                    Downloader.get(mRoot.getContext()).play(sermon);
                 }
             });
         }
@@ -70,6 +68,8 @@ public class MediaFragment extends Fragment {
         }
     }
 
+    private Disposable mSermonsListDisposable;
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container,
@@ -80,8 +80,7 @@ public class MediaFragment extends Fragment {
         recycler.setLayoutManager(new LinearLayoutManager(inflater.getContext()));
         SermonListAdapter adapter = new SermonListAdapter();
         recycler.setAdapter(adapter);
-        Downloader downloader = ((Home) getActivity()).downloader();
-        downloader.sermons
+        mSermonsListDisposable = Downloader.get(getContext()).sermons
             .map(new Function<Sermons, List<Sermon>>() {
                 @Override
                 public List<Sermon> apply(Sermons sermons) throws Exception {
@@ -90,13 +89,12 @@ public class MediaFragment extends Fragment {
             })
             .subscribe(adapter);
 
-        root.<PlayerControlView>findViewById(R.id.player_media).setPlayer(downloader.player);
-        downloader.playing.subscribe(new Consumer<Sermon>() {
-            @Override
-            public void accept(Sermon sermon) throws Exception {
-                root.<PlayerControlView>findViewById(R.id.player_media).setVisibility(View.VISIBLE);
-            }
-        });
         return root;
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        mSermonsListDisposable.dispose();
     }
 }

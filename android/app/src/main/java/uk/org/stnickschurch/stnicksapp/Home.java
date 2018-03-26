@@ -1,5 +1,6 @@
 package uk.org.stnickschurch.stnicksapp;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.TabLayout;
@@ -7,7 +8,6 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -17,29 +17,29 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import butterknife.BindView;
-import butterknife.ButterKnife;
+import io.reactivex.functions.Consumer;
 import uk.org.stnickschurch.stnicksapp.core.Downloader;
+import uk.org.stnickschurch.stnicksapp.core.Sermon;
 
-public class Home extends AppCompatActivity {
+public class Home extends BaseActivity {
     @BindView(R.id.toolbar) Toolbar mToolbar;
     @BindView(R.id.container) ViewPager mViewPager;
     @BindView(R.id.tabs) TabLayout mTabLayout;
 
-    private Downloader mDownloader;
-    public Downloader downloader() {
-        return mDownloader;
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        mDownloader = new Downloader(this);
-
-        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
-        ButterKnife.bind(this);
+        super.onCreate(savedInstanceState);
         setSupportActionBar(mToolbar);
         mViewPager.setAdapter(new SectionsPagerAdapter(getSupportFragmentManager()));
         mTabLayout.setupWithViewPager(mViewPager);
+
+        disposeOnDestroy(Downloader.get(this).playing.subscribe(new Consumer<Sermon>() {
+            @Override
+            public void accept(Sermon sermon) throws Exception {
+                startActivity(new Intent().setClass(Home.this, Player.class));
+            }
+        }));
     }
 
     @Override
