@@ -23,7 +23,6 @@
 
         <activity
             android:name=".Player"
-            android:label="@string/activity_playing"
             android:launchMode="singleTop"
             android:parentActivityName=".Home">
             <meta-data

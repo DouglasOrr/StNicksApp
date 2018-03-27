@@ -51,7 +51,7 @@ public class Player extends BaseActivity {
                     mSeekBar.setSecondaryProgress((int) player.getBufferedPosition());
                 }
             }
-        }, 0, 1000);
+        }, 0, getPeriodMs(R.string.seekbar_refresh));
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {

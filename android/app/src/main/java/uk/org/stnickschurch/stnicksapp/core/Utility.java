@@ -13,6 +13,8 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.google.common.base.Objects;
 
+import org.joda.time.format.PeriodFormatter;
+import org.joda.time.format.PeriodFormatterBuilder;
 import org.json.JSONObject;
 
 import java.util.Collections;
@@ -25,6 +27,24 @@ import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.functions.Consumer;
 
 public class Utility {
+    /**
+     * Provide a short word-based format for periods such as:
+     * "3h", "1m30s", "100ms"
+     */
+    public static final PeriodFormatter PERIOD_SHORT_FORMAT =
+            new PeriodFormatterBuilder()
+                    .printZeroRarelyLast()
+                    .rejectSignedValues(true)
+                    .appendHours()
+                    .appendSuffix("h")
+                    .appendMinutes()
+                    .appendSuffix("m")
+                    .appendSeconds()
+                    .appendSuffix("s")
+                    .appendMillis()
+                    .appendSuffix("ms")
+                    .toFormatter();
+
     /**
      * Create an Observable for a JSON request, which is made every time someone subscribes.
      *
@@ -70,6 +90,10 @@ public class Utility {
         }
     }
 
+    /**
+     * Implement Consumer & ListAdapter, to create a base adapter class that can
+     * subscribe to an observable list of items.
+     */
     public static abstract class ObserverListAdapter<T, TH extends RecyclerView.ViewHolder>
             extends ListAdapter<T, TH> implements Consumer<List<T>> {
         protected ObserverListAdapter(@NonNull DiffUtil.ItemCallback<T> diffCallback) {
@@ -97,6 +121,9 @@ public class Utility {
         };
     }
 
+    /**
+     * General logging helper.
+     */
     public static void log(String format, Object... args) {
         Log.d("StNicksApp", String.format(format, args));
     }
