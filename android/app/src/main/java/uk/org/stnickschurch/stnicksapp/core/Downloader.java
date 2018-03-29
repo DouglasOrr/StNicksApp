@@ -3,7 +3,6 @@ package uk.org.stnickschurch.stnicksapp.core;
 import android.content.Context;
 import android.net.Uri;
 
-import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.Volley;
 import com.google.android.exoplayer2.ExoPlayer;
@@ -16,9 +15,11 @@ import com.google.android.exoplayer2.util.Util;
 
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.Map;
 
 import io.reactivex.Observable;
+import io.reactivex.Scheduler;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
@@ -30,21 +31,25 @@ public class Downloader {
     public final ExoPlayer player;
     public final BehaviorSubject<Sermon> playing = BehaviorSubject.create();
     private final RequestQueue mQueue;
+    private final File mDownloadCache;
+    private final Scheduler mDownloader;
 
     public void play(Sermon sermon) {
         playing.onNext(sermon);
         player.setPlayWhenReady(true);
     }
 
-    public Observable<JSONObject> restGet(String url, JSONObject request, Map<String, String> headers) {
-        return Utility.request(mQueue, Request.Method.GET, url, request, headers)
-                .subscribeOn(Schedulers.computation());
+    public Observable<JSONObject> restGet(String url, Map<String, String> headers) {
+        return Utility.requestCachedGet(mQueue, url, headers, mDownloader, mDownloadCache, 100000L);
     }
 
     private Downloader(Context context) {
         mQueue = Volley.newRequestQueue(context);
+        mDownloadCache = new File(context.getFilesDir(), "cache");
+        mDownloadCache.mkdirs();
+        mDownloader = Schedulers.newThread();
 
-        sermons = restGet(context.getString(R.string.sermons_list), null, null)
+        sermons = restGet(context.getString(R.string.sermons_list), null)
                 .map(new Function<JSONObject, Sermons>() {
                     @Override
                     public Sermons apply(JSONObject obj) throws Exception {
@@ -55,7 +60,7 @@ public class Downloader {
         player = ExoPlayerFactory.newSimpleInstance(context, new DefaultTrackSelector(new DefaultBandwidthMeter()));
         final ExtractorMediaSource.Factory mediaFactory = new ExtractorMediaSource.Factory(
                 new DefaultHttpDataSourceFactory(Util.getUserAgent(context, "stnicksapp")));
-        playing.subscribeOn(Schedulers.computation())
+        playing.subscribeOn(Schedulers.io())
                 .subscribe(new Consumer<Sermon>() {
             @Override
             public void accept(Sermon sermon) throws Exception {

@@ -1,16 +1,11 @@
 package uk.org.stnickschurch.stnicksapp.core;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.io.BaseEncoding;
 
 import org.joda.time.DateTime;
 import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.nio.charset.Charset;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 public class Sermon {
     public final String id;
@@ -22,19 +17,14 @@ public class Sermon {
     public final DateTime time;
 
     private String calculateId() {
-        try {
-            Charset utf8 = Charset.forName("UTF-8");
-            MessageDigest digest = MessageDigest.getInstance("MD5");
-            digest.update(this.series.getBytes(utf8));
-            digest.update(this.title.getBytes(utf8));
-            digest.update(this.passage.getBytes(utf8));
-            digest.update(this.speaker.getBytes(utf8));
-            digest.update(time.toString(ISODateTimeFormat.dateTime()).getBytes(utf8));
-            digest.update(this.audio.getBytes(utf8));
-            return BaseEncoding.base32Hex().encode(digest.digest());
-        } catch (NoSuchAlgorithmException e) {
-            throw new Utility.ReallyBadError("Missing MD5", e);
-        }
+        return Utility.md5(
+                this.audio,
+                this.series,
+                this.title,
+                this.passage,
+                this.speaker,
+                this.time.toString(ISODateTimeFormat.dateTime())
+        );
     }
 
     public Sermon(String audio, String series, String title, String passage, DateTime time, String speaker) {

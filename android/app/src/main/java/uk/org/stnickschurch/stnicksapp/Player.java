@@ -18,6 +18,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import butterknife.BindView;
+import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
 import uk.org.stnickschurch.stnicksapp.core.Downloader;
 import uk.org.stnickschurch.stnicksapp.core.Sermon;
@@ -81,11 +82,13 @@ public class Player extends BaseActivity {
                 URLEncoder.encode(passage, "UTF-8"),
                 URLEncoder.encode("https://www.esv.org/", "UTF-8"));
         Downloader.get(this).restGet(
-                url, null,
+                url,
                 ImmutableMap.of(
                         "Authorization",
                         "Token 7a226c2dcd345957fa82736b2f558d8c3126159e")
-        ).subscribe(new Consumer<JSONObject>() {
+        )
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<JSONObject>() {
             @Override
             public void accept(JSONObject response) throws Exception {
                 String passageHtml = response.getJSONArray("passages").getString(0);
