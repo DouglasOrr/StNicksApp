@@ -22,6 +22,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
 import uk.org.stnickschurch.stnicksapp.core.Downloader;
 import uk.org.stnickschurch.stnicksapp.core.Sermon;
+import uk.org.stnickschurch.stnicksapp.core.Utility;
 
 public class Player extends BaseActivity {
     @BindView(R.id.seekbar_player) SeekBar mSeekBar;
@@ -52,7 +53,7 @@ public class Player extends BaseActivity {
                     mSeekBar.setSecondaryProgress((int) player.getBufferedPosition());
                 }
             }
-        }, 0, getPeriodMs(R.string.seekbar_refresh));
+        }, 0, Utility.getPeriodMs(getString(R.string.seekbar_refresh)));
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -85,7 +86,8 @@ public class Player extends BaseActivity {
                 url,
                 ImmutableMap.of(
                         "Authorization",
-                        "Token 7a226c2dcd345957fa82736b2f558d8c3126159e")
+                        "Token 7a226c2dcd345957fa82736b2f558d8c3126159e"),
+                Utility.getPeriodMs(getString(R.string.passage_refresh))
         )
                 .subscribeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Consumer<JSONObject>() {

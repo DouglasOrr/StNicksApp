@@ -16,6 +16,8 @@ import com.google.common.base.Objects;
 import com.google.common.io.BaseEncoding;
 import com.google.common.io.Files;
 
+import org.joda.time.Instant;
+import org.joda.time.Period;
 import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
 import org.json.JSONException;
@@ -46,6 +48,12 @@ public class Utility {
             new PeriodFormatterBuilder()
                     .printZeroRarelyLast()
                     .rejectSignedValues(true)
+                    .appendYears()
+                    .appendSuffix("y")
+                    .appendMonths()
+                    .appendSuffix("M")
+                    .appendWeeks()
+                    .appendSuffix("w")
                     .appendHours()
                     .appendSuffix("h")
                     .appendMinutes()
@@ -55,6 +63,20 @@ public class Utility {
                     .appendMillis()
                     .appendSuffix("ms")
                     .toFormatter();
+
+    /**
+     * Parse a period according to {@link #PERIOD_SHORT_FORMAT}.
+     */
+    public static Period getPeriod(String period) {
+        return Utility.PERIOD_SHORT_FORMAT.parsePeriod(period.replace(" ", ""));
+    }
+
+    /**
+     * Get the number of ms in a period, starting from now.
+     */
+    public static long getPeriodMs(String period) {
+        return getPeriod(period).toDurationFrom(Instant.now()).getMillis();
+    }
 
     /**
      * Create an Observable for a JSON request, which is made every time someone subscribes.

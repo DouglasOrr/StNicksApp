@@ -39,8 +39,8 @@ public class Downloader {
         player.setPlayWhenReady(true);
     }
 
-    public Observable<JSONObject> restGet(String url, Map<String, String> headers) {
-        return Utility.requestCachedGet(mQueue, url, headers, mDownloader, mDownloadCache, 100000L);
+    public Observable<JSONObject> restGet(String url, Map<String, String> headers, long timeoutMs) {
+        return Utility.requestCachedGet(mQueue, url, headers, mDownloader, mDownloadCache, timeoutMs);
     }
 
     private Downloader(Context context) {
@@ -49,7 +49,8 @@ public class Downloader {
         mDownloadCache.mkdirs();
         mDownloader = Schedulers.newThread();
 
-        sermons = restGet(context.getString(R.string.sermons_list), null)
+        long sermonsRefreshMs = Utility.getPeriodMs(context.getString(R.string.sermons_list_foreground_refresh));
+        sermons = restGet(context.getString(R.string.sermons_list), null, sermonsRefreshMs)
                 .map(new Function<JSONObject, Sermons>() {
                     @Override
                     public Sermons apply(JSONObject obj) throws Exception {

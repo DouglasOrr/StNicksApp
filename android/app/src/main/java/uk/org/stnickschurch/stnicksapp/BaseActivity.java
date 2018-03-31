@@ -26,14 +26,6 @@ public class BaseActivity extends AppCompatActivity {
         mDisposables.add(disposable);
     }
 
-    protected Period getPeriod(int id) {
-        return Utility.PERIOD_SHORT_FORMAT.parsePeriod(getString(id).replace(" ", ""));
-    }
-
-    protected long getPeriodMs(int id) {
-        return getPeriod(id).toDurationFrom(Instant.now()).getMillis();
-    }
-
     @Override
     protected void onDestroy() {
         mDisposables.dispose();

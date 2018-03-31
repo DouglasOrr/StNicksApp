@@ -17,4 +17,6 @@
     ]]></string>
 
     <string name="seekbar_refresh">1s</string>
+    <string name="sermons_list_foreground_refresh">1d</string>
+    <string name="passage_refresh">1M</string>
 </resources>
