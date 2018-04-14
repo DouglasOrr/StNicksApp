@@ -41,6 +41,7 @@ public class HomeActivity extends BaseActivity {
                 startActivity(new Intent().setClass(HomeActivity.this, PlayerActivity.class));
             }
         }));
+        SyncBroadcastReceiver.schedule(this);
     }
 
     @Override
@@ -53,7 +54,7 @@ public class HomeActivity extends BaseActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_settings:
-                // TODO: go to settings
+                startActivity(new Intent().setClass(this, SettingsActivity.class));
                 return true;
             case R.id.menu_sync:
                 Store.get(this).sync();

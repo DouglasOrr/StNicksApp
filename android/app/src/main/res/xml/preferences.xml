@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <SwitchPreference
+        android:key="sync_enabled"
+        android:defaultValue="true"
+        android:title="@string/sync_enabled_title"
+        android:summary="@string/sync_enabled_summary"/>
+</PreferenceScreen>

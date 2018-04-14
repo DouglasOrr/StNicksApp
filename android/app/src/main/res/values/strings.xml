@@ -1,21 +1,33 @@
 <resources>
+    <!-- Titles -->
     <string name="app_name">St Nick\'s Church</string>
+    <string name="title_activity_settings">Settings</string>
 
+    <!-- Menus -->
     <string name="menu_settings_title">Settings</string>
     <string name="menu_refresh_title">Refresh</string>
     <string name="menu_play_title">Play</string>
     <string name="menu_pause_title">Pause</string>
 
+    <!-- Home -->
     <string name="section_media">Media</string>
     <string name="section_calendar">Calendar</string>
     <string name="section_prayer">Prayer</string>
 
-    <string name="sermons_list">https://stnicksapp.blob.core.windows.net/sermons/test.json</string>
+    <!-- Settings -->
+    <string name="sync_enabled_summary">Download a list of available sermons in the background every few days (warning: may consume mobile data)</string>
+    <string name="sync_enabled_title">Sermon list background sync</string>
 
+    <!-- Errors -->
+    <string name="error_bad_sermon_list">Couldn\'t fetch sermons - bad data from server</string>
+    <string name="error_no_sermon_list">Couldn\'t fetch sermons - no connection</string>
+
+    <!-- Behaviour -->
+    <string name="sermons_list">https://stnicksapp.blob.core.windows.net/sermons/test.json</string>
     <string name="bible_html_header"><![CDATA[
         <link rel=\"stylesheet\" type=\"text/css\" href=\"bible.css\" />
     ]]></string>
-
     <string name="seekbar_refresh">1s</string>
     <string name="passage_refresh">1M</string>
+    <string name="background_sync">3d</string>
 </resources>

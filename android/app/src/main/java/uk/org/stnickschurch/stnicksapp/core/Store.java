@@ -17,7 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.reactivex.Observable;
-import io.reactivex.functions.Consumer;
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
@@ -49,7 +50,7 @@ public class Store {
         }
     }
 
-    @Database(entities = {Sermon.class}, version = 2)
+    @Database(entities = {Sermon.class}, version = 1)
     static abstract class AppDatabase extends RoomDatabase {
         public abstract SermonDao sermonDao();
     }
@@ -58,7 +59,7 @@ public class Store {
     private final AppDatabase mDatabase;
     private final BehaviorSubject<Object> mUpdates = BehaviorSubject.<Object> createDefault(false);
 
-    Store(Context context, AppDatabase database) {
+    private Store(Context context, AppDatabase database) {
         mContext = context;
         mDatabase = database;
     }
@@ -78,13 +79,27 @@ public class Store {
         Downloader.get(mContext)
                 .getRequest(mContext.getString(R.string.sermons_list), null)
                 .observeOn(Schedulers.io())
-                .subscribe(new Consumer<JSONObject>() {
+                .subscribe(new Observer<JSONObject>() {
                     @Override
-                    public void accept(JSONObject response) throws JSONException {
-                        List<Sermon> sermons = Sermon.readSermons(response);
-                        Utility.log("Syncing %d sermons", sermons.size());
-                        mDatabase.sermonDao().sync(sermons);
-                        mUpdates.onNext(false);
+                    public void onSubscribe(Disposable d) {
+                    }
+                    @Override
+                    public void onComplete() {
+                    }
+                    @Override
+                    public void onNext(JSONObject response) {
+                        try {
+                            List<Sermon> sermons = Sermon.readSermons(response);
+                            Utility.log("Syncing %d sermons", sermons.size());
+                            mDatabase.sermonDao().sync(sermons);
+                            mUpdates.onNext(false);
+                        } catch (JSONException e) {
+                            Errors.get(mContext).publish(R.string.error_bad_sermon_list);
+                        }
+                    }
+                    @Override
+                    public void onError(Throwable error) {
+                        Errors.get(mContext).publish(R.string.error_no_sermon_list);
                     }
                 });
     }
@@ -103,7 +118,7 @@ public class Store {
                                 context.getApplicationContext(),
                                 AppDatabase.class,
                                 "stnicksapp-core"
-                        ).fallbackToDestructiveMigration().build());
+                        ).build());
             }
             return mSingleton;
         }
