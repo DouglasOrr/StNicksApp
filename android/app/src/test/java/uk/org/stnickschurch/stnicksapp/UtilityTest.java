@@ -1,6 +1,5 @@
 package uk.org.stnickschurch.stnicksapp;
 
-import org.joda.time.Instant;
 import org.joda.time.Period;
 import org.junit.Test;
 
@@ -21,6 +20,9 @@ public class UtilityTest {
         assertThat(Utility.PERIOD_SHORT_FORMAT.parsePeriod("3w"),
                 is(Period.weeks(3)));
 
+        assertThat(Utility.PERIOD_SHORT_FORMAT.parsePeriod("5d"),
+                is(Period.days(5)));
+
         assertThat(Utility.PERIOD_SHORT_FORMAT.parsePeriod("2h"),
                 is(Period.hours(2)));
 
@@ -33,11 +35,11 @@ public class UtilityTest {
         assertThat(Utility.PERIOD_SHORT_FORMAT.parsePeriod("120ms"),
                 is(Period.millis(120)));
 
-        assertThat(Utility.PERIOD_SHORT_FORMAT.parsePeriod("2h30m5s10ms"),
-                is(new Period(0, 0, 0, 0, 2, 30, 5, 10)));
+        assertThat(Utility.PERIOD_SHORT_FORMAT.parsePeriod("1d2h30m5s10ms"),
+                is(new Period(0, 0, 0, 1, 2, 30, 5, 10)));
 
-        // Durations can vary in length, but hours, minutes, seconds & milliseconds don't
-        // (even leap seconds & timezone hour changes shouldn't matter here)
-        assertThat(Period.seconds(5).toDurationFrom(Instant.now()).getMillis(), is(5000L));
+        // Durations can vary in length, but seconds & milliseconds don't
+        // (leap seconds are the shortest practical variation)
+        assertThat(Utility.getPeriodMs("5s100ms"), is(5100L));
     }
 }

@@ -54,6 +54,8 @@ public class Utility {
                     .appendSuffix("M")
                     .appendWeeks()
                     .appendSuffix("w")
+                    .appendDays()
+                    .appendSuffix("d")
                     .appendHours()
                     .appendSuffix("h")
                     .appendMinutes()
