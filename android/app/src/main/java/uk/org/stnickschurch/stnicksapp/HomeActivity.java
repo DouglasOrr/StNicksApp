@@ -18,10 +18,11 @@ import android.widget.TextView;
 
 import butterknife.BindView;
 import io.reactivex.functions.Consumer;
-import uk.org.stnickschurch.stnicksapp.core.Downloader;
+import uk.org.stnickschurch.stnicksapp.core.Player;
 import uk.org.stnickschurch.stnicksapp.core.Sermon;
+import uk.org.stnickschurch.stnicksapp.core.Store;
 
-public class Home extends BaseActivity {
+public class HomeActivity extends BaseActivity {
     @BindView(R.id.toolbar) Toolbar mToolbar;
     @BindView(R.id.container) ViewPager mViewPager;
     @BindView(R.id.tabs) TabLayout mTabLayout;
@@ -34,10 +35,10 @@ public class Home extends BaseActivity {
         mViewPager.setAdapter(new SectionsPagerAdapter(getSupportFragmentManager()));
         mTabLayout.setupWithViewPager(mViewPager);
 
-        disposeOnDestroy(Downloader.get(this).playing.subscribe(new Consumer<Sermon>() {
+        disposeOnDestroy(Player.get(this).playing.subscribe(new Consumer<Sermon>() {
             @Override
-            public void accept(Sermon sermon) throws Exception {
-                startActivity(new Intent().setClass(Home.this, Player.class));
+            public void accept(Sermon sermon) {
+                startActivity(new Intent().setClass(HomeActivity.this, PlayerActivity.class));
             }
         }));
     }
@@ -50,13 +51,16 @@ public class Home extends BaseActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            // TODO: go to settings
-            return true;
+        switch (item.getItemId()) {
+            case R.id.menu_settings:
+                // TODO: go to settings
+                return true;
+            case R.id.menu_sync:
+                Store.get(this).sync();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
         }
-        return super.onOptionsItemSelected(item);
     }
 
     public static class CalendarFragment extends Fragment {
@@ -103,7 +107,6 @@ public class Home extends BaseActivity {
                 case 2:
                     return new PrayerFragment();
             }
-            // TODO: raise nonfatal
             return null;
         }
 

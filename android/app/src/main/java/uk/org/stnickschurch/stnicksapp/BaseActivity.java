@@ -4,13 +4,9 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 
-import org.joda.time.Instant;
-import org.joda.time.Period;
-
 import butterknife.ButterKnife;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
-import uk.org.stnickschurch.stnicksapp.core.Utility;
 
 public class BaseActivity extends AppCompatActivity {
     private CompositeDisposable mDisposables;

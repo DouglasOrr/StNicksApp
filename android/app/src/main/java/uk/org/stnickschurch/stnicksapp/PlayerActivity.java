@@ -21,10 +21,11 @@ import butterknife.BindView;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
 import uk.org.stnickschurch.stnicksapp.core.Downloader;
+import uk.org.stnickschurch.stnicksapp.core.Player;
 import uk.org.stnickschurch.stnicksapp.core.Sermon;
 import uk.org.stnickschurch.stnicksapp.core.Utility;
 
-public class Player extends BaseActivity {
+public class PlayerActivity extends BaseActivity {
     @BindView(R.id.seekbar_player) SeekBar mSeekBar;
     @BindView(R.id.webview_player) WebView mBibleView;
     private Timer mTimer;
@@ -33,19 +34,21 @@ public class Player extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         setContentView(R.layout.activity_player);
         super.onCreate(savedInstanceState);
-        disposeOnDestroy(Downloader.get(this).playing.subscribe(new Consumer<Sermon>() {
+
+        disposeOnDestroy(Player.get(this).playing.subscribe(new Consumer<Sermon>() {
             @Override
             public void accept(Sermon sermon) throws Exception {
                 getSupportActionBar().setTitle(sermon.passage);
                 loadPassage(sermon.passage);
             }
         }));
+
         mTimer = new Timer("seekbar");
         mTimer.scheduleAtFixedRate(new TimerTask() {
             private Timeline.Window mWindow = new Timeline.Window();
             @Override
             public void run() {
-                ExoPlayer player = Downloader.get(Player.this).player;
+                ExoPlayer player = Player.get(PlayerActivity.this).player;
                 if (!player.getCurrentTimeline().isEmpty()) {
                     player.getCurrentTimeline().getWindow(player.getCurrentWindowIndex(), mWindow);
                     mSeekBar.setMax((int) mWindow.getDurationMs());
@@ -54,11 +57,12 @@ public class Player extends BaseActivity {
                 }
             }
         }, 0, Utility.getPeriodMs(getString(R.string.seekbar_refresh)));
+
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    Downloader.get(Player.this).player.seekTo(progress);
+                    Player.get(PlayerActivity.this).player.seekTo(progress);
                 }
             }
             @Override
@@ -82,23 +86,23 @@ public class Player extends BaseActivity {
                         + "&link-url=%s",
                 URLEncoder.encode(passage, "UTF-8"),
                 URLEncoder.encode("https://www.esv.org/", "UTF-8"));
-        Downloader.get(this).restGet(
-                url,
-                ImmutableMap.of(
-                        "Authorization",
-                        "Token 7a226c2dcd345957fa82736b2f558d8c3126159e"),
-                Utility.getPeriodMs(getString(R.string.passage_refresh))
-        )
-                .subscribeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<JSONObject>() {
-            @Override
-            public void accept(JSONObject response) throws Exception {
-                String passageHtml = response.getJSONArray("passages").getString(0);
-                mBibleView.loadDataWithBaseURL("file:///android_asset/",
-                        getString(R.string.bible_html_header) + passageHtml,
-                        "text/html", "UTF-8", null);
-            }
-        });
+        disposeOnDestroy(Downloader.get(this).cachedGetRequest(
+                    url,
+                    ImmutableMap.of(
+                            "Authorization",
+                            "Token 7a226c2dcd345957fa82736b2f558d8c3126159e"),
+                    Utility.getPeriodMs(getString(R.string.passage_refresh))
+            )
+                    .subscribeOn(AndroidSchedulers.mainThread())
+                    .subscribe(new Consumer<JSONObject>() {
+                @Override
+                public void accept(JSONObject response) throws Exception {
+                    String passageHtml = response.getJSONArray("passages").getString(0);
+                    mBibleView.loadDataWithBaseURL("file:///android_asset/",
+                            getString(R.string.bible_html_header) + passageHtml,
+                            "text/html", "UTF-8", null);
+                }
+            }));
     }
 
     @Override
@@ -111,7 +115,7 @@ public class Player extends BaseActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_player, menu);
-        boolean playing = Downloader.get(this).player.getPlayWhenReady();
+        boolean playing = Player.get(PlayerActivity.this).player.getPlayWhenReady();
         menu.findItem(R.id.menu_play).setVisible(!playing);
         menu.findItem(R.id.menu_pause).setVisible(playing);
         return true;
@@ -121,11 +125,11 @@ public class Player extends BaseActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_play:
-                Downloader.get(this).player.setPlayWhenReady(true);
+                Player.get(PlayerActivity.this).player.setPlayWhenReady(true);
                 invalidateOptionsMenu();
                 return true;
             case R.id.menu_pause:
-                Downloader.get(this).player.setPlayWhenReady(false);
+                Player.get(PlayerActivity.this).player.setPlayWhenReady(false);
                 invalidateOptionsMenu();
                 return true;
             default:

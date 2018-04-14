@@ -11,40 +11,40 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import org.joda.time.format.DateTimeFormat;
-
-import java.util.List;
+import org.joda.time.format.DateTimeFormatter;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Function;
-import uk.org.stnickschurch.stnicksapp.core.Downloader;
+import uk.org.stnickschurch.stnicksapp.core.Player;
 import uk.org.stnickschurch.stnicksapp.core.Sermon;
-import uk.org.stnickschurch.stnicksapp.core.Sermons;
+import uk.org.stnickschurch.stnicksapp.core.Store;
 import uk.org.stnickschurch.stnicksapp.core.Utility;
 
 public class MediaFragment extends Fragment {
     public static class SermonViewHolder extends RecyclerView.ViewHolder {
+        public static final DateTimeFormatter TIME_FORMAT = DateTimeFormat.forPattern("EEE d MMMM y");
+
         @BindView(R.id.item_sermon) View mRoot;
-        //@BindView(R.id.text_sermon_series) TextView mSeries;
         @BindView(R.id.text_sermon_title) TextView mTitle;
         @BindView(R.id.text_sermon_passage) TextView mPassage;
         @BindView(R.id.text_sermon_speaker) TextView mSpeaker;
         @BindView(R.id.text_sermon_time) TextView mTime;
+
         public SermonViewHolder(View root) {
             super(root);
             ButterKnife.bind(this, root);
         }
+
         public void bindTo(final Sermon sermon) {
-            //mSeries.setText(sermon.series);
             mTitle.setText(sermon.title);
             mPassage.setText(sermon.passage);
             mSpeaker.setText(sermon.speaker);
-            mTime.setText(sermon.time.toString(DateTimeFormat.forPattern("EEE d MMMM y")));
+            mTime.setText(sermon.getTime().toString(TIME_FORMAT));
             mRoot.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    Downloader.get(mRoot.getContext()).play(sermon);
+                    Player.get(mRoot.getContext()).play(sermon);
                 }
             });
         }
@@ -80,14 +80,9 @@ public class MediaFragment extends Fragment {
         recycler.setLayoutManager(new LinearLayoutManager(inflater.getContext()));
         SermonListAdapter adapter = new SermonListAdapter();
         recycler.setAdapter(adapter);
-        mSermonsListDisposable = Downloader.get(getContext()).sermons
-            .map(new Function<Sermons, List<Sermon>>() {
-                @Override
-                public List<Sermon> apply(Sermons sermons) throws Exception {
-                    return sermons.list;
-                }
-            })
-            .subscribe(adapter);
+        mSermonsListDisposable = Store.get(getContext())
+                .recentSermons()
+                .subscribe(adapter);
 
         return root;
     }
