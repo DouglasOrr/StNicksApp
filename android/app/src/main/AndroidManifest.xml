@@ -3,6 +3,7 @@
     package="uk.org.stnickschurch.stnicksapp">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.SEND_DOWNLOAD_COMPLETED_INTENTS" />
 
     <application
         android:allowBackup="true"
@@ -42,9 +43,6 @@
 
         <receiver
             android:name=".SyncBroadcastReceiver"
-            android:enabled="true"
             android:exported="false" />
-
     </application>
-
 </manifest>

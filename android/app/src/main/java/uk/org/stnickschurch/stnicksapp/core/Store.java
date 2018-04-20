@@ -8,6 +8,7 @@ import android.arch.persistence.room.Query;
 import android.arch.persistence.room.Room;
 import android.arch.persistence.room.RoomDatabase;
 import android.arch.persistence.room.Transaction;
+import android.arch.persistence.room.TypeConverters;
 import android.content.Context;
 
 import org.json.JSONException;
@@ -39,6 +40,10 @@ public class Store {
         @Query("DELETE FROM sermon WHERE id NOT IN (:ids)")
         abstract void keepOnly(List<String> ids);
 
+        @TypeConverters(Sermon.Local.DownloadState.Converter.class)
+        @Query("UPDATE sermon SET local_download_state = :state WHERE id = :id")
+        abstract void setDownloadState(String id, Sermon.Local.DownloadState state);
+
         @Transaction
         void sync(List<Sermon> sermons) {
             insertAll(sermons);
@@ -50,14 +55,15 @@ public class Store {
         }
     }
 
-    @Database(entities = {Sermon.class}, version = 1)
+    @Database(entities = {Sermon.class}, version = 2)
     static abstract class AppDatabase extends RoomDatabase {
         public abstract SermonDao sermonDao();
     }
 
     private final Context mContext;
     private final AppDatabase mDatabase;
-    private final BehaviorSubject<Object> mUpdates = BehaviorSubject.<Object> createDefault(false);
+    private static final Object UPDATE = new Object();  // Just a marker object
+    private final BehaviorSubject<Object> mUpdates = BehaviorSubject.<Object> createDefault(UPDATE);
 
     private Store(Context context, AppDatabase database) {
         mContext = context;
@@ -76,7 +82,7 @@ public class Store {
     }
 
     public void sync() {
-        Downloader.get(mContext)
+        Downloader.SINGLETON.get(mContext)
                 .getRequest(mContext.getString(R.string.sermons_list), null)
                 .observeOn(Schedulers.io())
                 .subscribe(new Observer<JSONObject>() {
@@ -92,35 +98,36 @@ public class Store {
                             List<Sermon> sermons = Sermon.readSermons(response);
                             Utility.log("Syncing %d sermons", sermons.size());
                             mDatabase.sermonDao().sync(sermons);
-                            mUpdates.onNext(false);
+                            mUpdates.onNext(UPDATE);
                         } catch (JSONException e) {
-                            Errors.get(mContext).publish(R.string.error_bad_sermon_list);
+                            Errors.SINGLETON.get(mContext).publish(R.string.error_bad_sermon_list);
                         }
                     }
                     @Override
                     public void onError(Throwable error) {
-                        Errors.get(mContext).publish(R.string.error_no_sermon_list);
+                        Errors.SINGLETON.get(mContext).publish(R.string.error_no_sermon_list);
                     }
                 });
     }
 
-    private static final Object SINGLETON_LOCK = new Object();
-    private static Store mSingleton = null;
-    public static Store get(Context context) {
-        if (mSingleton != null) {
-            return mSingleton;
-        }
-        synchronized (SINGLETON_LOCK) {
-            if (mSingleton == null) {
-                mSingleton = new Store(
-                        context.getApplicationContext(),
-                        Room.databaseBuilder(
-                                context.getApplicationContext(),
-                                AppDatabase.class,
-                                "stnicksapp-core"
-                        ).build());
+    public void setDownloadState(final Sermon sermon, final Sermon.Local.DownloadState state) {
+        Schedulers.io().scheduleDirect(new Runnable() {
+            @Override
+            public void run() {
+                mDatabase.sermonDao().setDownloadState(sermon.id, state);
+                mUpdates.onNext(UPDATE);
             }
-            return mSingleton;
-        }
+        });
     }
+
+    public static final Singleton<Store> SINGLETON = new Singleton<Store>() {
+        @Override
+        Store newInstance(Context context) {
+            return new Store(
+                context,
+                Room.databaseBuilder(
+                    context, AppDatabase.class,"stnicksapp-core"
+                ).fallbackToDestructiveMigration().build()); // TODO: DO NOT COMMIT
+        }
+    };
 }

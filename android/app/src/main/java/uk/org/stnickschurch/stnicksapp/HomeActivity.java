@@ -35,7 +35,7 @@ public class HomeActivity extends BaseActivity {
         mViewPager.setAdapter(new SectionsPagerAdapter(getSupportFragmentManager()));
         mTabLayout.setupWithViewPager(mViewPager);
 
-        disposeOnDestroy(Player.get(this).playing.subscribe(new Consumer<Sermon>() {
+        disposeOnDestroy(Player.SINGLETON.get(this).playing.subscribe(new Consumer<Sermon>() {
             @Override
             public void accept(Sermon sermon) {
                 startActivity(new Intent().setClass(HomeActivity.this, PlayerActivity.class));
@@ -57,7 +57,7 @@ public class HomeActivity extends BaseActivity {
                 startActivity(new Intent().setClass(this, SettingsActivity.class));
                 return true;
             case R.id.menu_sync:
-                Store.get(this).sync();
+                Store.SINGLETON.get(this).sync();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);

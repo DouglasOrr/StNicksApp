@@ -4,6 +4,8 @@ import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Embedded;
 import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.PrimaryKey;
+import android.arch.persistence.room.TypeConverter;
+import android.arch.persistence.room.TypeConverters;
 import android.support.annotation.NonNull;
 
 import com.google.common.base.MoreObjects;
@@ -63,25 +65,63 @@ public class Sermon {
      *  - all data here should have default initialization (for newly downloaded sermons)
      */
     public static class Local {
-        @ColumnInfo(name = "local_downloaded")
-        public boolean downloaded = false;
+        public enum DownloadState {
+            NONE,
+            DOWNLOADING,
+            DOWNLOADED,
+            FAILED;
+            public static class Converter {
+                @TypeConverter
+                public static DownloadState toDownloadState(Integer state) {
+                    return DownloadState.values()[state];
+                }
+                @TypeConverter
+                public static Integer toInteger(DownloadState state) {
+                    return state.ordinal();
+                }
+            }
+        }
+        @TypeConverters(DownloadState.Converter.class)
+        @ColumnInfo(name = "local_download_state")
+        public DownloadState downloadState = DownloadState.NONE;
+
+        @Override
+        public boolean equals(Object that) {
+            return this == that
+                    || (that != null
+                    && this.getClass() == that.getClass()
+                    && this.downloadState == ((Local) that).downloadState);
+        }
+
+        @Override
+        public int hashCode() {
+            return downloadState.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                    .add("download_state", downloadState)
+                    .toString();
+        }
     }
     @NonNull @Embedded
     public Local local = new Local();
 
-    // Object identity
+    // Object equality
 
     @Override
     public boolean equals(Object that) {
         return this == that
                 || (that != null
                 && this.getClass() == that.getClass()
-                && this.id.equals(((Sermon) that).id));
+                && this.id.equals(((Sermon) that).id)
+                && this.local.equals(((Sermon) that).local));
     }
 
     @Override
     public int hashCode() {
-        return id.hashCode();
+        return id.hashCode() + local.hashCode();
     }
 
     @Override
@@ -94,7 +134,7 @@ public class Sermon {
                 .add("passage", passage)
                 .add("speaker", speaker)
                 .add("time", time)
-                .add("local_downloaded", local.downloaded)
+                .add("local", local)
                 .toString();
     }
 

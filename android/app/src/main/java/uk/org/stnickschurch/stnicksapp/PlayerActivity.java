@@ -35,7 +35,7 @@ public class PlayerActivity extends BaseActivity {
         setContentView(R.layout.activity_player);
         super.onCreate(savedInstanceState);
 
-        disposeOnDestroy(Player.get(this).playing.subscribe(new Consumer<Sermon>() {
+        disposeOnDestroy(Player.SINGLETON.get(this).playing.subscribe(new Consumer<Sermon>() {
             @Override
             public void accept(Sermon sermon) throws Exception {
                 getSupportActionBar().setTitle(sermon.passage);
@@ -48,7 +48,7 @@ public class PlayerActivity extends BaseActivity {
             private Timeline.Window mWindow = new Timeline.Window();
             @Override
             public void run() {
-                ExoPlayer player = Player.get(PlayerActivity.this).player;
+                ExoPlayer player = Player.SINGLETON.get(PlayerActivity.this).player;
                 if (!player.getCurrentTimeline().isEmpty()) {
                     player.getCurrentTimeline().getWindow(player.getCurrentWindowIndex(), mWindow);
                     mSeekBar.setMax((int) mWindow.getDurationMs());
@@ -62,7 +62,7 @@ public class PlayerActivity extends BaseActivity {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    Player.get(PlayerActivity.this).player.seekTo(progress);
+                    Player.SINGLETON.get(PlayerActivity.this).player.seekTo(progress);
                 }
             }
             @Override
@@ -86,7 +86,7 @@ public class PlayerActivity extends BaseActivity {
                         + "&link-url=%s",
                 URLEncoder.encode(passage, "UTF-8"),
                 URLEncoder.encode("https://www.esv.org/", "UTF-8"));
-        disposeOnDestroy(Downloader.get(this).cachedGetRequest(
+        disposeOnDestroy(Downloader.SINGLETON.get(this).cachedGetRequest(
                     url,
                     ImmutableMap.of(
                             "Authorization",
@@ -115,7 +115,7 @@ public class PlayerActivity extends BaseActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_player, menu);
-        boolean playing = Player.get(PlayerActivity.this).player.getPlayWhenReady();
+        boolean playing = Player.SINGLETON.get(PlayerActivity.this).player.getPlayWhenReady();
         menu.findItem(R.id.menu_play).setVisible(!playing);
         menu.findItem(R.id.menu_pause).setVisible(playing);
         return true;
@@ -125,11 +125,11 @@ public class PlayerActivity extends BaseActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_play:
-                Player.get(PlayerActivity.this).player.setPlayWhenReady(true);
+                Player.SINGLETON.get(PlayerActivity.this).player.setPlayWhenReady(true);
                 invalidateOptionsMenu();
                 return true;
             case R.id.menu_pause:
-                Player.get(PlayerActivity.this).player.setPlayWhenReady(false);
+                Player.SINGLETON.get(PlayerActivity.this).player.setPlayWhenReady(false);
                 invalidateOptionsMenu();
                 return true;
             default:

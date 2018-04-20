@@ -14,17 +14,10 @@ public class Errors {
         errors.onNext(mContext.getString(id));
     }
 
-    private static final Object SINGLETON_LOCK = new Object();
-    private static Errors mSingleton = null;
-    public static Errors get(Context context) {
-        if (mSingleton != null) {
-            return mSingleton;
+    public static final Singleton<Errors> SINGLETON = new Singleton<Errors>() {
+        @Override
+        Errors newInstance(Context context) {
+            return new Errors(context);
         }
-        synchronized (SINGLETON_LOCK) {
-            if (mSingleton == null) {
-                mSingleton = new Errors(context.getApplicationContext());
-            }
-            return mSingleton;
-        }
-    }
+    };
 }
