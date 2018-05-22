@@ -16,7 +16,7 @@
 
     <style name="IconButton">
         <item name="android:background">#00000000</item>
-        <item name="android:tint">#80000000</item>
+        <item name="android:tint">#ffffffff</item>
         <item name="android:padding">10dp</item>
     </style>
 </resources>

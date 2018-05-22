@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:background="@color/colorBackground"
     android:layout_width="match_parent"
@@ -8,14 +9,67 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    android:orientation="vertical"
     tools:context=".MediaFragment">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:id="@+id/buttonbar_selected_sermon"
+        android:visibility="gone"
+        android:background="@color/colorPrimary"
+        android:padding="@dimen/pad_list_cell"
+        android:layout_marginBottom="@dimen/pad_list_cell"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#ffffffff"
+            android:id="@+id/buttonbar_selected_sermon_title"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/pad_list_cell">
+            <ImageButton
+                android:id="@+id/button_sermon_play"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                style="@style/IconButton"
+                app:srcCompat="@drawable/ic_play"/>
+            <ImageButton
+                android:id="@+id/button_sermon_download"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                style="@style/IconButton"
+                app:srcCompat="@drawable/ic_download"/>
+            <ImageButton
+                android:id="@+id/button_sermon_retry"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                style="@style/IconButton"
+                app:srcCompat="@drawable/ic_error"/>
+            <ImageButton
+                android:id="@+id/button_sermon_delete"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                style="@style/IconButton"
+                app:srcCompat="@drawable/ic_delete"/>
+        </LinearLayout>
+
+    </LinearLayout>
 
     <android.support.v7.widget.RecyclerView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_below="@id/buttonbar_selected_sermon"
         android:id="@+id/recyclerview_media"
-        android:scrollbars="vertical">
+        android:scrollbars="none">
     </android.support.v7.widget.RecyclerView>
 
-</LinearLayout>
+</RelativeLayout>

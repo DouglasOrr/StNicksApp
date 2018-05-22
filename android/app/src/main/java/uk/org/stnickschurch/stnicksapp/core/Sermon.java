@@ -1,11 +1,8 @@
 package uk.org.stnickschurch.stnicksapp.core;
 
 import android.arch.persistence.room.ColumnInfo;
-import android.arch.persistence.room.Embedded;
 import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.PrimaryKey;
-import android.arch.persistence.room.TypeConverter;
-import android.arch.persistence.room.TypeConverters;
 import android.support.annotation.NonNull;
 
 import com.google.common.base.MoreObjects;
@@ -20,11 +17,17 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Basic data type for Sermon metadata that is synced from a server data store.
+ *
+ * Contains a key "id" which hashes the contents, so sermon.id is a full identifier for the
+ * sermon.
+ */
 @Entity(tableName = "sermon")
 public class Sermon {
-    @NonNull @PrimaryKey
+    @NonNull @ColumnInfo(name = "id") @PrimaryKey
     public String id;
-    public void recomputeId() {
+    private void recomputeId() {
         id = Utility.md5(
                 this.audio,
                 this.series,
@@ -59,55 +62,6 @@ public class Sermon {
         this.time = time.toString(TIME_FORMAT);
     }
 
-    /**
-     * Locally cached data.
-     *  - not considered in equals(), hashCode()
-     *  - all data here should have default initialization (for newly downloaded sermons)
-     */
-    public static class Local {
-        public enum DownloadState {
-            NONE,
-            DOWNLOADING,
-            DOWNLOADED,
-            FAILED;
-            public static class Converter {
-                @TypeConverter
-                public static DownloadState toDownloadState(Integer state) {
-                    return DownloadState.values()[state];
-                }
-                @TypeConverter
-                public static Integer toInteger(DownloadState state) {
-                    return state.ordinal();
-                }
-            }
-        }
-        @TypeConverters(DownloadState.Converter.class)
-        @ColumnInfo(name = "local_download_state")
-        public DownloadState downloadState = DownloadState.NONE;
-
-        @Override
-        public boolean equals(Object that) {
-            return this == that
-                    || (that != null
-                    && this.getClass() == that.getClass()
-                    && this.downloadState == ((Local) that).downloadState);
-        }
-
-        @Override
-        public int hashCode() {
-            return downloadState.hashCode();
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this)
-                    .add("download_state", downloadState)
-                    .toString();
-        }
-    }
-    @NonNull @Embedded
-    public Local local = new Local();
-
     // Object equality
 
     @Override
@@ -115,13 +69,12 @@ public class Sermon {
         return this == that
                 || (that != null
                 && this.getClass() == that.getClass()
-                && this.id.equals(((Sermon) that).id)
-                && this.local.equals(((Sermon) that).local));
+                && this.id.equals(((Sermon) that).id));
     }
 
     @Override
     public int hashCode() {
-        return id.hashCode() + local.hashCode();
+        return id.hashCode();
     }
 
     @Override
@@ -134,7 +87,6 @@ public class Sermon {
                 .add("passage", passage)
                 .add("speaker", speaker)
                 .add("time", time)
-                .add("local", local)
                 .toString();
     }
 

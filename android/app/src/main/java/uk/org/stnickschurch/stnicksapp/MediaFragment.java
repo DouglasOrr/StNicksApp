@@ -9,10 +9,10 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 import android.widget.TextView;
 
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -20,54 +20,33 @@ import org.joda.time.format.DateTimeFormatter;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
+import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
 import uk.org.stnickschurch.stnicksapp.core.Player;
 import uk.org.stnickschurch.stnicksapp.core.Sermon;
+import uk.org.stnickschurch.stnicksapp.core.SermonDownload;
 import uk.org.stnickschurch.stnicksapp.core.Store;
 import uk.org.stnickschurch.stnicksapp.core.Utility;
 
 public class MediaFragment extends Fragment {
-    public static class SermonViewHolder extends RecyclerView.ViewHolder {
-        public static final DateTimeFormatter TIME_FORMAT = DateTimeFormat.forPattern("EEE d MMMM y");
-
+    public static final DateTimeFormatter TIME_FORMAT = DateTimeFormat.forPattern("EEE d MMMM y");
+    public class SermonViewHolder extends RecyclerView.ViewHolder {
         Sermon mSermon;
         @BindView(R.id.item_sermon) View mRoot;
         @BindView(R.id.text_sermon_title) TextView mTitle;
         @BindView(R.id.text_sermon_passage) TextView mPassage;
         @BindView(R.id.text_sermon_speaker) TextView mSpeaker;
         @BindView(R.id.text_sermon_time) TextView mTime;
-        @BindView(R.id.buttonbar_sermon_action) View mActionButtons;
-        @BindView(R.id.button_sermon_retry) ImageButton mButtonRetry;
-        @BindView(R.id.button_sermon_download) ImageButton mButtonDownload;
-        @BindView(R.id.button_sermon_delete) ImageButton mButtonDelete;
 
         public SermonViewHolder(View root) {
             super(root);
             ButterKnife.bind(this, root);
         }
 
-        private void action(Player.Action.Type type) {
-            Player.SINGLETON.get(mRoot.getContext()).actions.onNext(new Player.Action(mSermon, type));
-        }
-        @OnClick(R.id.button_sermon_play)
-        public void clickPlay() {
-            action(Player.Action.Type.PLAY);
-        }
-        @OnClick(R.id.button_sermon_download)
-        public void clickDownload() {
-            action(Player.Action.Type.DOWNLOAD);
-        }
-        @OnClick(R.id.button_sermon_retry)
-        public void clickRetry() {
-            action(Player.Action.Type.DOWNLOAD);
-        }
-        @OnClick(R.id.button_sermon_delete)
-        public void clickDelete() {
-            action(Player.Action.Type.DELETE);
-        }
         @OnClick(R.id.item_sermon)
         public void click() {
-            mActionButtons.setVisibility(mActionButtons.getVisibility() != View.GONE ? View.GONE : View.VISIBLE);
+            MediaFragment.this.toggleSermon(mSermon);
         }
 
         public void bindTo(final Sermon sermon) {
@@ -76,33 +55,10 @@ public class MediaFragment extends Fragment {
             mPassage.setText(sermon.passage);
             mSpeaker.setText(sermon.speaker);
             mTime.setText(sermon.getTime().toString(TIME_FORMAT));
-            mActionButtons.setVisibility(View.GONE);
-            switch (sermon.local.downloadState) {
-                case NONE:
-                    mButtonDownload.setVisibility(View.VISIBLE);
-                    mButtonRetry.setVisibility(View.GONE);
-                    mButtonDelete.setVisibility(View.GONE);
-                    break;
-                case DOWNLOADING:
-                    mButtonDownload.setVisibility(View.GONE);
-                    mButtonRetry.setVisibility(View.GONE);
-                    mButtonDelete.setVisibility(View.GONE);
-                    break;
-                case FAILED:
-                    mButtonDownload.setVisibility(View.GONE);
-                    mButtonRetry.setVisibility(View.VISIBLE);
-                    mButtonDelete.setVisibility(View.GONE);
-                    break;
-                case DOWNLOADED:
-                    mButtonDownload.setVisibility(View.GONE);
-                    mButtonRetry.setVisibility(View.GONE);
-                    mButtonDelete.setVisibility(View.VISIBLE);
-                    break;
-            }
         }
     }
 
-    public static class SermonListAdapter extends Utility.ObserverListAdapter<Sermon, SermonViewHolder> {
+    public class SermonListAdapter extends Utility.ObserverListAdapter<Sermon, SermonViewHolder> {
         public SermonListAdapter() {
             super(new DiffUtil.ItemCallback<Sermon>() {
                 @Override
@@ -130,13 +86,20 @@ public class MediaFragment extends Fragment {
     }
 
     private Disposable mSermonsListDisposable;
+    private Sermon mCurrentSermon;
+    private Disposable mCurrentSermonDownloadDisposable;
+    @BindView(R.id.buttonbar_selected_sermon) View mSelectedSermon;
+    @BindView(R.id.buttonbar_selected_sermon_title) TextView mSelectedSermonTitle;
+    @BindView(R.id.button_sermon_download) View mSelectedSermonDownload;
+    @BindView(R.id.button_sermon_retry) View mSelectedSermonRetry;
+    @BindView(R.id.button_sermon_delete) View mSelectedSermonDelete;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container,
                              Bundle savedInstanceState) {
         final View root = inflater.inflate(R.layout.fragment_media, container, false);
-
+        ButterKnife.bind(this, root);
         RecyclerView recycler = root.findViewById(R.id.recyclerview_media);
         recycler.setLayoutManager(new LinearLayoutManager(inflater.getContext()));
         SermonListAdapter adapter = new SermonListAdapter();
@@ -152,5 +115,52 @@ public class MediaFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         mSermonsListDisposable.dispose();
+    }
+
+    // Selected Sermon window
+
+    @OnClick(R.id.button_sermon_play)
+    protected void clickPlay() {
+        Player.SINGLETON.get(getContext()).play(mCurrentSermon);
+    }
+    @OnClick({R.id.button_sermon_download, R.id.button_sermon_retry})
+    protected void clickDownload() {
+        Store.SINGLETON.get(getContext()).download(mCurrentSermon);
+    }
+    @OnClick(R.id.button_sermon_delete)
+    protected void clickDelete() {
+        Store.SINGLETON.get(getContext()).delete(mCurrentSermon);
+    }
+
+    private void toggleSermon(Sermon sermon) {
+        if (mCurrentSermonDownloadDisposable != null) {
+            mCurrentSermonDownloadDisposable.dispose();
+            mCurrentSermonDownloadDisposable = null;
+        }
+        if (mCurrentSermon != null && mCurrentSermon.equals(sermon)) {
+            Utility.log("Deselecting %s", sermon);
+            mCurrentSermon = null;
+            mSelectedSermon.setVisibility(View.GONE);
+        } else {
+            Utility.log("Selecting %s", sermon);
+            mCurrentSermon = sermon;
+            mSelectedSermon.setVisibility(View.VISIBLE);
+            mSelectedSermonTitle.setText(sermon.title);
+
+            mCurrentSermonDownloadDisposable = Store.SINGLETON.get(getContext())
+                    .watchDownload(mCurrentSermon)
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(new Consumer<Optional<SermonDownload>>() {
+                @Override
+                public void accept(Optional<SermonDownload> sermonDownload) {
+                    Utility.log("SermonDownload %s", sermonDownload);
+                    boolean hasRecord = sermonDownload.isPresent();
+                    boolean hasFile = hasRecord && sermonDownload.get().local_path != null;
+                    mSelectedSermonDownload.setVisibility(!hasRecord ? View.VISIBLE : View.GONE);
+                    mSelectedSermonRetry.setVisibility((hasRecord && !hasFile) ? View.VISIBLE : View.GONE);
+                    mSelectedSermonDelete.setVisibility(hasFile ? View.VISIBLE : View.GONE);
+                }
+            });
+        }
     }
 }
