@@ -1,5 +1,7 @@
 package uk.org.stnickschurch.stnicksapp;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
@@ -11,6 +13,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 
@@ -46,7 +49,7 @@ public class MediaFragment extends Fragment {
 
         @OnClick(R.id.item_sermon)
         public void click() {
-            MediaFragment.this.toggleSermon(mSermon);
+            MediaFragment.this.showDialog(mSermon);
         }
 
         public void bindTo(final Sermon sermon) {
@@ -86,20 +89,12 @@ public class MediaFragment extends Fragment {
     }
 
     private Disposable mSermonsListDisposable;
-    private Sermon mCurrentSermon;
-    private Disposable mCurrentSermonDownloadDisposable;
-    @BindView(R.id.buttonbar_selected_sermon) View mSelectedSermon;
-    @BindView(R.id.buttonbar_selected_sermon_title) TextView mSelectedSermonTitle;
-    @BindView(R.id.button_sermon_download) View mSelectedSermonDownload;
-    @BindView(R.id.button_sermon_retry) View mSelectedSermonRetry;
-    @BindView(R.id.button_sermon_delete) View mSelectedSermonDelete;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container,
                              Bundle savedInstanceState) {
         final View root = inflater.inflate(R.layout.fragment_media, container, false);
-        ButterKnife.bind(this, root);
         RecyclerView recycler = root.findViewById(R.id.recyclerview_media);
         recycler.setLayoutManager(new LinearLayoutManager(inflater.getContext()));
         SermonListAdapter adapter = new SermonListAdapter();
@@ -117,50 +112,54 @@ public class MediaFragment extends Fragment {
         mSermonsListDisposable.dispose();
     }
 
-    // Selected Sermon window
+    private void executeShowDialog(final Sermon sermon, Optional<SermonDownload> download) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setTitle(sermon.passage);
+        builder.setMessage(Joiner.on("\n").join(
+                sermon.title,
+                sermon.speaker,
+                sermon.getTime().toString(DateTimeFormat.mediumDate())));
 
-    @OnClick(R.id.button_sermon_play)
-    protected void clickPlay() {
-        Player.SINGLETON.get(getContext()).play(mCurrentSermon);
-    }
-    @OnClick({R.id.button_sermon_download, R.id.button_sermon_retry})
-    protected void clickDownload() {
-        Store.SINGLETON.get(getContext()).download(mCurrentSermon);
-    }
-    @OnClick(R.id.button_sermon_delete)
-    protected void clickDelete() {
-        Store.SINGLETON.get(getContext()).delete(mCurrentSermon);
-    }
-
-    private void toggleSermon(Sermon sermon) {
-        if (mCurrentSermonDownloadDisposable != null) {
-            mCurrentSermonDownloadDisposable.dispose();
-            mCurrentSermonDownloadDisposable = null;
-        }
-        if (mCurrentSermon != null && mCurrentSermon.equals(sermon)) {
-            Utility.log("Deselecting %s", sermon);
-            mCurrentSermon = null;
-            mSelectedSermon.setVisibility(View.GONE);
-        } else {
-            Utility.log("Selecting %s", sermon);
-            mCurrentSermon = sermon;
-            mSelectedSermon.setVisibility(View.VISIBLE);
-            mSelectedSermonTitle.setText(sermon.title);
-
-            mCurrentSermonDownloadDisposable = Store.SINGLETON.get(getContext())
-                    .watchDownload(mCurrentSermon)
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(new Consumer<Optional<SermonDownload>>() {
+        boolean hasRecord = download.isPresent();
+        boolean hasFile = hasRecord && download.get().local_path != null;
+        builder.setPositiveButton(R.string.sermon_dialog_play,
+                new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                Player.SINGLETON.get(getContext()).play(sermon);
+            }
+        });
+        if (hasFile) {
+            builder.setNeutralButton(R.string.sermon_dialog_delete,
+                    new DialogInterface.OnClickListener() {
                 @Override
-                public void accept(Optional<SermonDownload> sermonDownload) {
-                    Utility.log("SermonDownload %s", sermonDownload);
-                    boolean hasRecord = sermonDownload.isPresent();
-                    boolean hasFile = hasRecord && sermonDownload.get().local_path != null;
-                    mSelectedSermonDownload.setVisibility(!hasRecord ? View.VISIBLE : View.GONE);
-                    mSelectedSermonRetry.setVisibility((hasRecord && !hasFile) ? View.VISIBLE : View.GONE);
-                    mSelectedSermonDelete.setVisibility(hasFile ? View.VISIBLE : View.GONE);
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    Store.SINGLETON.get(getContext()).delete(sermon);
+                }
+            });
+        } else {
+            builder.setNeutralButton(
+                    hasRecord ? R.string.sermon_dialog_retry : R.string.sermon_dialog_download,
+                    new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    Store.SINGLETON.get(getContext()).download(sermon);
                 }
             });
         }
+        builder.show();
+    }
+
+    private void showDialog(final Sermon sermon) {
+        // TODO: add to unsubscribe list?
+        Store.SINGLETON.get(getContext())
+                .getDownload(sermon)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<Optional<SermonDownload>>() {
+            @Override
+            public void accept(Optional<SermonDownload> download) {
+                executeShowDialog(sermon, download);
+            }
+        });
     }
 }

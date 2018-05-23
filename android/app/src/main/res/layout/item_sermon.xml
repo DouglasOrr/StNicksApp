@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="@dimen/pad_list"
+    android:textAppearance="@style/TextAppearance.AppCompat.Small"
     android:id="@+id/item_sermon">
 
     <TextView
@@ -10,31 +12,36 @@
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_alignParentStart="true"
-        android:id="@+id/text_sermon_title">
-    </TextView>
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:id="@+id/text_sermon_passage">
-    </TextView>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/text_sermon_title"
-        android:layout_alignParentStart="true"
-        android:layout_marginTop="@dimen/pad_list_cell"
-        android:id="@+id/text_sermon_speaker">
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:id="@+id/text_sermon_passage"
+        tools:text="Luke 15:25-32">
     </TextView>
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/text_sermon_passage"
-        android:layout_alignParentEnd="true"
+        android:layout_alignParentStart="true"
         android:layout_marginTop="@dimen/pad_list_cell"
-        android:id="@+id/text_sermon_time">
+        android:id="@+id/text_sermon_time"
+        tools:text="Sun 11 March 2018">
+    </TextView>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginBottom="@dimen/pad_list_cell"
+        android:id="@+id/text_sermon_title"
+        tools:text="Tales Of The Unexpected 4">
+    </TextView>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:id="@+id/text_sermon_speaker"
+        tools:text="Chris Fishlock">
     </TextView>
 
 </RelativeLayout>

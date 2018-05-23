@@ -26,11 +26,11 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.reactivex.Flowable;
 import io.reactivex.Observable;
-import io.reactivex.ObservableEmitter;
-import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.Observer;
+import io.reactivex.Single;
+import io.reactivex.SingleEmitter;
+import io.reactivex.SingleOnSubscribe;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
@@ -68,15 +68,16 @@ public class Store {
         abstract void start(SermonDownload sermonDownload);
 
         @Query("UPDATE sermon_download" +
-               " SET local_path = :local_path, download_id = NULL" +
+               " SET local_path = :local_path" +
                " WHERE download_id = :download_id")
         abstract int finish(long download_id, String local_path);
 
         @Query("SELECT * FROM sermon_download WHERE sermon_id = :sermon_id")
         abstract SermonDownload get(String sermon_id);
 
-        @Query("SELECT * FROM sermon_download WHERE sermon_id = :sermon_id")
-        abstract Flowable<List<SermonDownload>> watch(String sermon_id);
+        @Query("SELECT sermon.* FROM sermon JOIN sermon_download ON sermon.id=sermon_download.sermon_id" +
+                " WHERE sermon_download.download_id = :download_id")
+        abstract Sermon findSermon(long download_id);
 
         @Query("DELETE FROM sermon_download WHERE sermon_id = :sermon_id")
         abstract void delete(String sermon_id);
@@ -91,7 +92,7 @@ public class Store {
     private final Context mContext;
     private final AppDatabase mDatabase;
     private static final Object UPDATE = new Object();  // Just a marker object
-    private final BehaviorSubject<Object> mUpdates = BehaviorSubject.<Object> createDefault(UPDATE);
+    private final BehaviorSubject<Object> mUpdates = BehaviorSubject.createDefault(UPDATE);
 
     private Store(Context context) {
         mContext = context;
@@ -99,18 +100,37 @@ public class Store {
                 context, AppDatabase.class,"stnicksapp-core"
         ).build();
 
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        filter.addAction(DownloadManager.ACTION_NOTIFICATION_CLICKED);
         mContext.registerReceiver(new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                final long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, 0L);
-                Schedulers.io().scheduleDirect(new Runnable() {
-                    @Override
-                    public void run() {
-                        finishDownload(id);
+                final String action = intent.getAction();
+                if (DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(action)) {
+                    final long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, 0L);
+                    Schedulers.io().scheduleDirect(new Runnable() {
+                        @Override
+                        public void run() {
+                            finishDownload(id);
+                        }
+                    });
+                } else if (DownloadManager.ACTION_NOTIFICATION_CLICKED.equals(action)) {
+                    long[] ids = intent.getLongArrayExtra(DownloadManager.EXTRA_NOTIFICATION_CLICK_DOWNLOAD_IDS);
+                    if (ids.length == 1) {
+                        final long id = ids[0];
+                        Schedulers.io().scheduleDirect(new Runnable() {
+                            @Override
+                            public void run() {
+                                openDownload(id);
+                            }
+                        });
+                    } else {
+                        Errors.SINGLETON.get(mContext).publish(R.string.error_download_not_found);
                     }
-                });
+                }
             }
-        }, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        }, filter);
     }
 
     public Observable<List<Sermon>> recentSermons() {
@@ -153,36 +173,37 @@ public class Store {
                 });
     }
 
-    public Observable<Uri> getLocalOrRemoteAudio(final Sermon sermon) {
-        return Observable.create(new ObservableOnSubscribe<Uri>() {
+    public Single<Uri> getLocalOrRemoteAudio(final Sermon sermon) {
+        return Single.create(new SingleOnSubscribe<Uri>() {
             @Override
-            public void subscribe(ObservableEmitter<Uri> emitter) throws Exception {
+            public void subscribe(SingleEmitter<Uri> emitter) {
                 SermonDownload download = mDatabase.downloads().get(sermon.id);
                 if (download != null && download.local_path != null) {
-                    emitter.onNext(Uri.fromFile(new File(download.local_path)));
+                    emitter.onSuccess(Uri.fromFile(new File(download.local_path)));
                 } else {
-                    emitter.onNext(Uri.parse(sermon.audio));
+                    emitter.onSuccess(Uri.parse(sermon.audio));
                 }
-                emitter.onComplete();
             }
         }).subscribeOn(Schedulers.io());
     }
 
-    public Flowable<Optional<SermonDownload>> watchDownload(Sermon sermon) {
-        return mDatabase.downloads()
-                .watch(sermon.id)
-                .map(new Function<List<SermonDownload>, Optional<SermonDownload>>() {
+    public Single<Optional<SermonDownload>> getDownload(final Sermon sermon) {
+        return Single.create(new SingleOnSubscribe<Optional<SermonDownload>>() {
             @Override
-            public Optional<SermonDownload> apply(List<SermonDownload> sermonDownloads) {
-                if (sermonDownloads.isEmpty()) {
-                    return Optional.absent();
-                } else {
-                    return Optional.of(sermonDownloads.get(0));
-                }
+            public void subscribe(SingleEmitter<Optional<SermonDownload>> emitter) {
+                emitter.onSuccess(Optional.fromNullable(mDatabase.downloads().get(sermon.id)));
             }
-        });
+        }).subscribeOn(Schedulers.io());
     }
 
+    private void openDownload(long id) {
+        Sermon sermon = mDatabase.downloads().findSermon(id);
+        if (sermon == null) {
+            Errors.SINGLETON.get(mContext).publish(R.string.error_download_not_found);
+        } else {
+            Player.SINGLETON.get(mContext).play(sermon);
+        }
+    }
     private void finishDownload(long id) {
         DownloadManager downloadManager = (DownloadManager) mContext.getSystemService(Context.DOWNLOAD_SERVICE);
         Cursor cursor = downloadManager.query(new DownloadManager.Query().setFilterById(id));
@@ -198,7 +219,6 @@ public class Store {
             new File(localPath).delete();
         }
     }
-
     private void executeDownload(Sermon sermon) {
         File local = new File(mContext.getExternalFilesDir("sermons"),
                 sermon.title + "." + Files.getFileExtension(sermon.audio));
