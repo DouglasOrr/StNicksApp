@@ -43,6 +43,9 @@ import uk.org.stnickschurch.stnicksapp.R;
 public class Store {
     @Dao
     static abstract class SermonDao {
+        @Query("SELECT * FROM sermon WHERE id = :id")
+        abstract Sermon get(String id);
+
         @Query("SELECT * FROM sermon ORDER BY time DESC")
         abstract List<Sermon> recentSermons();
 
@@ -68,14 +71,15 @@ public class Store {
         abstract void start(SermonDownload sermonDownload);
 
         @Query("UPDATE sermon_download" +
-               " SET local_path = :local_path" +
+               " SET local_path = :local_path, download_id = NULL" +
                " WHERE download_id = :download_id")
         abstract int finish(long download_id, String local_path);
 
         @Query("SELECT * FROM sermon_download WHERE sermon_id = :sermon_id")
         abstract SermonDownload get(String sermon_id);
 
-        @Query("SELECT sermon.* FROM sermon JOIN sermon_download ON sermon.id=sermon_download.sermon_id" +
+        @Query("SELECT sermon.* FROM sermon" +
+                " JOIN sermon_download ON sermon.id=sermon_download.sermon_id" +
                 " WHERE sermon_download.download_id = :download_id")
         abstract Sermon findSermon(long download_id);
 
@@ -96,9 +100,11 @@ public class Store {
 
     private Store(Context context) {
         mContext = context;
+        // We think we can fall back to destructive migration, as this database is essentially
+        // just a cache
         mDatabase = Room.databaseBuilder(
                 context, AppDatabase.class,"stnicksapp-core"
-        ).build();
+        ).fallbackToDestructiveMigration().build();
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
@@ -196,6 +202,15 @@ public class Store {
         }).subscribeOn(Schedulers.io());
     }
 
+    public Single<Optional<Sermon>> getSermon(final String id) {
+        return Single.create(new SingleOnSubscribe<Optional<Sermon>>() {
+            @Override
+            public void subscribe(SingleEmitter<Optional<Sermon>> emitter) {
+                emitter.onSuccess(Optional.fromNullable(mDatabase.sermons().get(id)));
+            }
+        }).subscribeOn(Schedulers.io());
+    }
+
     private void openDownload(long id) {
         Sermon sermon = mDatabase.downloads().findSermon(id);
         if (sermon == null) {
@@ -205,7 +220,8 @@ public class Store {
         }
     }
     private void finishDownload(long id) {
-        DownloadManager downloadManager = (DownloadManager) mContext.getSystemService(Context.DOWNLOAD_SERVICE);
+        DownloadManager downloadManager =
+                (DownloadManager) mContext.getSystemService(Context.DOWNLOAD_SERVICE);
         Cursor cursor = downloadManager.query(new DownloadManager.Query().setFilterById(id));
         if (!cursor.moveToFirst()) {
             Utility.log("Error! couldn't find downloaded file");
@@ -213,10 +229,19 @@ public class Store {
         }
         String localUri = cursor.getString(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI));
         String localPath = Uri.parse(localUri).getPath();
+        // We must do this before .finish(), as the link is broken
+        Sermon sermon = mDatabase.downloads().findSermon(id);
         if (mDatabase.downloads().finish(id, localPath) == 0) {
             // Something else has happened, and the download doesn't match - we don't need the "orphaned" file anymore
             Utility.log("Warning! couldn't find sermon for downloaded file %s", localPath);
             new File(localPath).delete();
+        }
+
+        // Notify for a sermon open
+        if (sermon != null) {
+            Notifications.notifyDownloadComplete(mContext, sermon);
+        } else {
+            Utility.log("Warning! couldn't find sermon for downloaded file %s", localPath);
         }
     }
     private void executeDownload(Sermon sermon) {
@@ -224,8 +249,9 @@ public class Store {
                 sermon.title + "." + Files.getFileExtension(sermon.audio));
         DownloadManager.Request request = new DownloadManager.Request(Uri.parse(sermon.audio))
                 .setDestinationUri(Uri.fromFile(local))
-                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setTitle(sermon.title);
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+                .setTitle(sermon.userTitle())
+                .setDescription(sermon.userDescription());
         DownloadManager downloadManager = (DownloadManager) mContext.getSystemService(Context.DOWNLOAD_SERVICE);
         long downloadId = downloadManager.enqueue(request);
         mDatabase.downloads().start(new SermonDownload(sermon.id, downloadId));

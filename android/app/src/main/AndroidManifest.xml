@@ -42,7 +42,9 @@
         </activity>
 
         <receiver
-            android:name=".SyncBroadcastReceiver"
-            android:exported="false" />
+            android:name=".SyncBroadcastReceiver" />
+
+        <receiver
+            android:name=".PlayBroadcastReceiver" />
     </application>
 </manifest>

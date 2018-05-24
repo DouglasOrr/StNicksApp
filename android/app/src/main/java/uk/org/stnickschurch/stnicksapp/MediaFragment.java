@@ -13,12 +13,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
-
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -33,7 +29,6 @@ import uk.org.stnickschurch.stnicksapp.core.Store;
 import uk.org.stnickschurch.stnicksapp.core.Utility;
 
 public class MediaFragment extends Fragment {
-    public static final DateTimeFormatter TIME_FORMAT = DateTimeFormat.forPattern("EEE d MMMM y");
     public class SermonViewHolder extends RecyclerView.ViewHolder {
         Sermon mSermon;
         @BindView(R.id.item_sermon) View mRoot;
@@ -57,7 +52,7 @@ public class MediaFragment extends Fragment {
             mTitle.setText(sermon.title);
             mPassage.setText(sermon.passage);
             mSpeaker.setText(sermon.speaker);
-            mTime.setText(sermon.getTime().toString(TIME_FORMAT));
+            mTime.setText(sermon.getTime().toString(Sermon.USER_TIME_FORMAT));
         }
     }
 
@@ -101,6 +96,7 @@ public class MediaFragment extends Fragment {
         recycler.setAdapter(adapter);
         mSermonsListDisposable = Store.SINGLETON.get(getContext())
                 .recentSermons()
+                .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(adapter);
 
         return root;
@@ -114,11 +110,8 @@ public class MediaFragment extends Fragment {
 
     private void executeShowDialog(final Sermon sermon, Optional<SermonDownload> download) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle(sermon.passage);
-        builder.setMessage(Joiner.on("\n").join(
-                sermon.title,
-                sermon.speaker,
-                sermon.getTime().toString(DateTimeFormat.mediumDate())));
+        builder.setTitle(sermon.userTitle());
+        builder.setMessage(sermon.userDescription());
 
         boolean hasRecord = download.isPresent();
         boolean hasFile = hasRecord && download.get().local_path != null;

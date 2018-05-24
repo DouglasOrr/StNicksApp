@@ -5,9 +5,11 @@ import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.PrimaryKey;
 import android.support.annotation.NonNull;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONArray;
@@ -54,12 +56,12 @@ public class Sermon {
 
     @NonNull @ColumnInfo(name = "time")
     public String time;
-    private static final DateTimeFormatter TIME_FORMAT = ISODateTimeFormat.dateTimeNoMillis();
+    private static final DateTimeFormatter ISO_TIME_FORMAT = ISODateTimeFormat.dateTimeNoMillis();
     public DateTime getTime() {
-        return TIME_FORMAT.parseDateTime(time);
+        return ISO_TIME_FORMAT.parseDateTime(time);
     }
     public void setTime(DateTime time) {
-        this.time = time.toString(TIME_FORMAT);
+        this.time = time.toString(ISO_TIME_FORMAT);
     }
 
     // Object equality
@@ -111,5 +113,26 @@ public class Sermon {
             sermons.add(readSermon(objSermons.getJSONObject(i)));
         }
         return sermons;
+    }
+
+    // User interface
+
+    public static final DateTimeFormatter USER_TIME_FORMAT = DateTimeFormat.forPattern("EEE d MMMM y");
+
+    /**
+     * The sermon title to use in notifications & popups.
+     */
+    public String userTitle() {
+        return passage;
+    }
+
+    /**
+     * The sermon description, for notifications & popups.
+     */
+    public String userDescription() {
+        return Joiner.on("\n").join(
+                title,
+                speaker,
+                getTime().toString(USER_TIME_FORMAT));
     }
 }
