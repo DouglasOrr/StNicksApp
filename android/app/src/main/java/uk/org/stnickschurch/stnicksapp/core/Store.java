@@ -152,7 +152,7 @@ public class Store {
 
     public void sync() {
         Downloader.SINGLETON.get(mContext)
-                .getRequest(mContext.getString(R.string.sermons_list), null)
+                .getRequest(mContext.getString(R.string.sermon_list), null)
                 .observeOn(Schedulers.io())
                 .subscribe(new Observer<JSONObject>() {
                     @Override

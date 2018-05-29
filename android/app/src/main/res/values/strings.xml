@@ -30,14 +30,16 @@
     <string name="error_download_not_found">Couldn\'t find downloaded sermon</string>
     <string name="message_sermons_refreshed">Sermons list refreshed</string>
     <string name="message_prayers_refreshed">Prayers refreshed</string>
+    <string name="message_calendar_refreshed">Calendar refreshed</string>
 
     <!-- Behaviour -->
-    <string name="sermons_list">https://stnicksapp.blob.core.windows.net/sermons/test.json</string>
+    <string name="sermon_list">https://stnicksapp.blob.core.windows.net/sermons/test.json</string>
+    <string name="prayers">https://docs.google.com/document/d/e/2PACX-1vTa3NEUDj7xqBqV7zjrMZQn0XuHAsK24sOJyoK9ruBLxXd-foxpNFcNmFJcRv3zyh-75YYugmrG2J4G/pub?embedded=true</string>
+    <string name="calendar">https://calendar.google.com/calendar/embed?src=c4q58viob1m2dh9rb1mkcr2e7k%40group.calendar.google.com&amp;mode=AGENDA&amp;showTitle=0&amp;showPrint=0&amp;showTabs=0&amp;showDate=0&amp;showNav=0&amp;showTz=0&amp;showCalendars=0&amp;ctz=Europe%2FLondon</string>
     <string name="bible_html_header"><![CDATA[
         <link rel=\"stylesheet\" type=\"text/css\" href=\"bible.css\" />
     ]]></string>
-    <string name="prayers">https://docs.google.com/document/d/e/2PACX-1vTa3NEUDj7xqBqV7zjrMZQn0XuHAsK24sOJyoK9ruBLxXd-foxpNFcNmFJcRv3zyh-75YYugmrG2J4G/pub?embedded=true</string>
-    <string name="seekbar_refresh">1s</string>
+     <string name="seekbar_refresh">1s</string>
     <string name="passage_refresh">1M</string>
     <string name="background_sync">3d</string>
 </resources>
