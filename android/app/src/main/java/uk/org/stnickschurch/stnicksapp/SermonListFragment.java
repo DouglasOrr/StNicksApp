@@ -21,7 +21,6 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 import uk.org.stnickschurch.stnicksapp.core.Player;
 import uk.org.stnickschurch.stnicksapp.core.Sermon;
@@ -29,7 +28,7 @@ import uk.org.stnickschurch.stnicksapp.core.SermonDownload;
 import uk.org.stnickschurch.stnicksapp.core.Store;
 import uk.org.stnickschurch.stnicksapp.core.Utility;
 
-public class MediaFragment extends Fragment {
+public class SermonListFragment extends Fragment {
     public class SermonViewHolder extends RecyclerView.ViewHolder {
         Sermon mSermon;
         @BindView(R.id.item_sermon) View mRoot;
@@ -45,7 +44,7 @@ public class MediaFragment extends Fragment {
 
         @OnClick(R.id.item_sermon)
         public void click() {
-            MediaFragment.this.showDialog(mSermon);
+            SermonListFragment.this.showDialog(mSermon);
         }
 
         public void bindTo(final Sermon sermon) {
@@ -90,7 +89,7 @@ public class MediaFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container,
                              Bundle savedInstanceState) {
-        final View root = inflater.inflate(R.layout.fragment_media, container, false);
+        final View root = inflater.inflate(R.layout.fragment_sermon_list, container, false);
         RecyclerView recycler = root.findViewById(R.id.recyclerview_media);
         recycler.setLayoutManager(new LinearLayoutManager(inflater.getContext()));
         SermonListAdapter adapter = new SermonListAdapter();

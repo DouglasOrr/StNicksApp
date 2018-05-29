@@ -75,17 +75,6 @@ public class HomeActivity extends BaseActivity {
         }
     }
 
-    public static class PrayerFragment extends Fragment {
-        @Override
-        public View onCreateView(@NonNull LayoutInflater inflater,
-                                 ViewGroup container,
-                                 Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.fragment_home, container, false);
-            ((TextView) rootView.findViewById(R.id.section_label)).setText(R.string.section_prayer);
-            return rootView;
-        }
-    }
-
     public class SectionsPagerAdapter extends FragmentPagerAdapter {
         SectionsPagerAdapter(FragmentManager fm) {
             super(fm);
@@ -102,7 +91,7 @@ public class HomeActivity extends BaseActivity {
             // Return a PlaceholderFragment (defined as a static inner class below).
             switch (position) {
                 case 0:
-                    return new MediaFragment();
+                    return new SermonListFragment();
                 case 1:
                     return new CalendarFragment();
                 case 2:
@@ -115,7 +104,7 @@ public class HomeActivity extends BaseActivity {
         public CharSequence getPageTitle(int position) {
             switch (position) {
                 case 0:
-                    return getString(R.string.section_media);
+                    return getString(R.string.section_sermons);
                 case 1:
                     return getString(R.string.section_calendar);
                 case 2:

@@ -16,7 +16,7 @@
     <string name="sermon_dialog_delete">Delete</string>
 
     <!-- Home -->
-    <string name="section_media">Media</string>
+    <string name="section_sermons">Sermons</string>
     <string name="section_calendar">Calendar</string>
     <string name="section_prayer">Prayer</string>
 
@@ -34,6 +34,7 @@
     <string name="bible_html_header"><![CDATA[
         <link rel=\"stylesheet\" type=\"text/css\" href=\"bible.css\" />
     ]]></string>
+    <string name="prayers">https://docs.google.com/document/d/e/2PACX-1vTa3NEUDj7xqBqV7zjrMZQn0XuHAsK24sOJyoK9ruBLxXd-foxpNFcNmFJcRv3zyh-75YYugmrG2J4G/pub?embedded=true</string>
     <string name="seekbar_refresh">1s</string>
     <string name="passage_refresh">1M</string>
     <string name="background_sync">3d</string>
