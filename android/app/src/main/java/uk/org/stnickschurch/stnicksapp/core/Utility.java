@@ -12,7 +12,6 @@ import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
-import com.google.common.base.Objects;
 import com.google.common.io.BaseEncoding;
 import com.google.common.io.Files;
 
@@ -200,22 +199,6 @@ public class Utility {
         public void accept(List<T> items) {
             submitList(items);
         }
-    }
-
-    /**
-     * A DiffUtil that delegates to item's .equals.
-     */
-    public static <T> DiffUtil.ItemCallback<T> identityDiff() {
-        return new DiffUtil.ItemCallback<T>() {
-            @Override
-            public boolean areItemsTheSame(T oldItem, T newItem) {
-                return areContentsTheSame(oldItem, newItem);
-            }
-            @Override
-            public boolean areContentsTheSame(T oldItem, T newItem) {
-                return Objects.equal(oldItem, newItem);
-            }
-        };
     }
 
     /**

@@ -16,7 +16,7 @@ import uk.org.stnickschurch.stnicksapp.core.Utility;
 public class SyncBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
-        Store.get(context).sync();
+        Store.SINGLETON.get(context).sync();
     }
 
     public static void schedule(Context context) {

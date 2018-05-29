@@ -8,46 +8,45 @@ import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
 
 import io.reactivex.functions.Consumer;
-import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 
+/**
+ * Manage playing & syncing of sermons.
+ */
 public class Player {
     public final BehaviorSubject<Sermon> playing = BehaviorSubject.create();
     public final ExoPlayer player;
+    private final Context mContext;
+    private final ExtractorMediaSource.Factory mMediaFactory;
 
-    public void play(Sermon sermon) {
-        playing.onNext(sermon);
+    public void play(final Sermon sermon) {
+        Store.SINGLETON.get(mContext).getLocalOrRemoteAudio(sermon)
+                .subscribe(new Consumer<Uri>() {
+            @Override
+            public void accept(Uri uri) {
+                Utility.log("Playing %s", uri);
+                player.prepare(mMediaFactory.createMediaSource(uri));
+                player.setPlayWhenReady(true);
+                playing.onNext(sermon);
+            }
+        });
     }
 
     private Player(Context context) {
+        mContext = context;
         player = ExoPlayerFactory.newSimpleInstance(context, new DefaultTrackSelector(new DefaultBandwidthMeter()));
-        final ExtractorMediaSource.Factory mediaFactory = new ExtractorMediaSource.Factory(
-                new DefaultHttpDataSourceFactory(Util.getUserAgent(context, "stnicksapp")));
-        playing.subscribeOn(Schedulers.io())
-                .subscribe(new Consumer<Sermon>() {
-                    @Override
-                    public void accept(Sermon sermon) {
-                        player.prepare(mediaFactory.createMediaSource(Uri.parse(sermon.audio)));
-                        player.setPlayWhenReady(true);
-                    }
-                });
+        mMediaFactory = new ExtractorMediaSource.Factory(
+                new DefaultDataSourceFactory(context, Util.getUserAgent(context, "stnicksapp")));
     }
 
-    private static final Object SINGLETON_LOCK = new Object();
-    private static Player mSingleton = null;
-    public static Player get(Context context) {
-        if (mSingleton != null) {
-            return mSingleton;
+    public static Singleton<Player> SINGLETON = new Singleton<Player>() {
+        @Override
+        Player newInstance(Context context) {
+            return new Player(context);
         }
-        synchronized (SINGLETON_LOCK) {
-            if (mSingleton == null) {
-                mSingleton = new Player(context.getApplicationContext());
-            }
-            return mSingleton;
-        }
-    }
+    };
 }

@@ -1,14 +1,15 @@
 package uk.org.stnickschurch.stnicksapp.core;
 
 import android.arch.persistence.room.ColumnInfo;
-import android.arch.persistence.room.Embedded;
 import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.PrimaryKey;
 import android.support.annotation.NonNull;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 import org.json.JSONArray;
@@ -18,11 +19,17 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Basic data type for Sermon metadata that is synced from a server data store.
+ *
+ * Contains a key "id" which hashes the contents, so sermon.id is a full identifier for the
+ * sermon.
+ */
 @Entity(tableName = "sermon")
 public class Sermon {
-    @NonNull @PrimaryKey
+    @NonNull @ColumnInfo(name = "id") @PrimaryKey
     public String id;
-    public void recomputeId() {
+    private void recomputeId() {
         id = Utility.md5(
                 this.audio,
                 this.series,
@@ -49,27 +56,15 @@ public class Sermon {
 
     @NonNull @ColumnInfo(name = "time")
     public String time;
-    private static final DateTimeFormatter TIME_FORMAT = ISODateTimeFormat.dateTimeNoMillis();
+    private static final DateTimeFormatter ISO_TIME_FORMAT = ISODateTimeFormat.dateTimeNoMillis();
     public DateTime getTime() {
-        return TIME_FORMAT.parseDateTime(time);
+        return ISO_TIME_FORMAT.parseDateTime(time);
     }
     public void setTime(DateTime time) {
-        this.time = time.toString(TIME_FORMAT);
+        this.time = time.toString(ISO_TIME_FORMAT);
     }
 
-    /**
-     * Locally cached data.
-     *  - not considered in equals(), hashCode()
-     *  - all data here should have default initialization (for newly downloaded sermons)
-     */
-    public static class Local {
-        @ColumnInfo(name = "local_downloaded")
-        public boolean downloaded = false;
-    }
-    @NonNull @Embedded
-    public Local local = new Local();
-
-    // Object identity
+    // Object equality
 
     @Override
     public boolean equals(Object that) {
@@ -94,7 +89,6 @@ public class Sermon {
                 .add("passage", passage)
                 .add("speaker", speaker)
                 .add("time", time)
-                .add("local_downloaded", local.downloaded)
                 .toString();
     }
 
@@ -119,5 +113,30 @@ public class Sermon {
             sermons.add(readSermon(objSermons.getJSONObject(i)));
         }
         return sermons;
+    }
+
+    // User interface
+
+    public static final DateTimeFormatter USER_TIME_FORMAT = DateTimeFormat.forPattern("EEE d MMMM y");
+
+    /**
+     * The sermon title to use in notifications & popups.
+     */
+    public String userTitle() {
+        return passage;
+    }
+
+    /**
+     * The sermon description, for notifications & popups.
+     */
+    public String userDescription(String separator) {
+        return Joiner.on(separator).join(title, speaker, userDate());
+    }
+
+    /**
+     * The date of the sermon.
+     */
+    public String userDate() {
+        return getTime().toString(USER_TIME_FORMAT);
     }
 }

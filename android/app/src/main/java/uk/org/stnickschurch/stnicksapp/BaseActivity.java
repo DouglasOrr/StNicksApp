@@ -22,7 +22,7 @@ public class BaseActivity extends AppCompatActivity {
         mDisposables = new CompositeDisposable();
 
         // Very basic error presentation (toasts are bad!)
-        disposeOnDestroy(Errors.get(this).errors
+        disposeOnDestroy(Errors.SINGLETON.get(this).errors
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Consumer<String>() {
                     @Override

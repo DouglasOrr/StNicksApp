@@ -9,6 +9,12 @@
     <string name="menu_play_title">Play</string>
     <string name="menu_pause_title">Pause</string>
 
+    <!-- Sermon dialog -->
+    <string name="sermon_dialog_play">Play</string>
+    <string name="sermon_dialog_download">Download</string>
+    <string name="sermon_dialog_retry">Retry</string>
+    <string name="sermon_dialog_delete">Delete</string>
+
     <!-- Home -->
     <string name="section_media">Media</string>
     <string name="section_calendar">Calendar</string>
@@ -21,6 +27,7 @@
     <!-- Errors -->
     <string name="error_bad_sermon_list">Couldn\'t fetch sermons - bad data from server</string>
     <string name="error_no_sermon_list">Couldn\'t fetch sermons - no connection</string>
+    <string name="error_download_not_found">Couldn\'t find downloaded sermon</string>
 
     <!-- Behaviour -->
     <string name="sermons_list">https://stnicksapp.blob.core.windows.net/sermons/test.json</string>

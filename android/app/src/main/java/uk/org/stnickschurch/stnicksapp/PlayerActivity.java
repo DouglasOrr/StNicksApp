@@ -35,7 +35,7 @@ public class PlayerActivity extends BaseActivity {
         setContentView(R.layout.activity_player);
         super.onCreate(savedInstanceState);
 
-        disposeOnDestroy(Player.get(this).playing.subscribe(new Consumer<Sermon>() {
+        disposeOnDestroy(Player.SINGLETON.get(this).playing.subscribe(new Consumer<Sermon>() {
             @Override
             public void accept(Sermon sermon) throws Exception {
                 getSupportActionBar().setTitle(sermon.passage);
@@ -48,7 +48,7 @@ public class PlayerActivity extends BaseActivity {
             private Timeline.Window mWindow = new Timeline.Window();
             @Override
             public void run() {
-                ExoPlayer player = Player.get(PlayerActivity.this).player;
+                ExoPlayer player = Player.SINGLETON.get(PlayerActivity.this).player;
                 if (!player.getCurrentTimeline().isEmpty()) {
                     player.getCurrentTimeline().getWindow(player.getCurrentWindowIndex(), mWindow);
                     mSeekBar.setMax((int) mWindow.getDurationMs());
@@ -57,12 +57,11 @@ public class PlayerActivity extends BaseActivity {
                 }
             }
         }, 0, Utility.getPeriodMs(getString(R.string.seekbar_refresh)));
-
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    Player.get(PlayerActivity.this).player.seekTo(progress);
+                    Player.SINGLETON.get(PlayerActivity.this).player.seekTo(progress);
                 }
             }
             @Override
@@ -86,23 +85,22 @@ public class PlayerActivity extends BaseActivity {
                         + "&link-url=%s",
                 URLEncoder.encode(passage, "UTF-8"),
                 URLEncoder.encode("https://www.esv.org/", "UTF-8"));
-        disposeOnDestroy(Downloader.get(this).cachedGetRequest(
-                    url,
-                    ImmutableMap.of(
-                            "Authorization",
-                            "Token 7a226c2dcd345957fa82736b2f558d8c3126159e"),
-                    Utility.getPeriodMs(getString(R.string.passage_refresh))
-            )
-                    .subscribeOn(AndroidSchedulers.mainThread())
-                    .subscribe(new Consumer<JSONObject>() {
-                @Override
-                public void accept(JSONObject response) throws Exception {
-                    String passageHtml = response.getJSONArray("passages").getString(0);
-                    mBibleView.loadDataWithBaseURL("file:///android_asset/",
-                            getString(R.string.bible_html_header) + passageHtml,
-                            "text/html", "UTF-8", null);
-                }
-            }));
+        disposeOnDestroy(Downloader.SINGLETON.get(this).cachedGetRequest(
+                        url,
+                        ImmutableMap.of(
+                                "Authorization",
+                                "Token 7a226c2dcd345957fa82736b2f558d8c3126159e"),
+                        Utility.getPeriodMs(getString(R.string.passage_refresh)))
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<JSONObject>() {
+                    @Override
+                    public void accept(JSONObject response) throws Exception {
+                        String passageHtml = response.getJSONArray("passages").getString(0);
+                        mBibleView.loadDataWithBaseURL("file:///android_asset/",
+                                getString(R.string.bible_html_header) + passageHtml,
+                                "text/html", "UTF-8", null);
+                    }
+                }));
     }
 
     @Override
@@ -115,7 +113,7 @@ public class PlayerActivity extends BaseActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_player, menu);
-        boolean playing = Player.get(PlayerActivity.this).player.getPlayWhenReady();
+        boolean playing = Player.SINGLETON.get(PlayerActivity.this).player.getPlayWhenReady();
         menu.findItem(R.id.menu_play).setVisible(!playing);
         menu.findItem(R.id.menu_pause).setVisible(playing);
         return true;
@@ -125,11 +123,11 @@ public class PlayerActivity extends BaseActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_play:
-                Player.get(PlayerActivity.this).player.setPlayWhenReady(true);
+                Player.SINGLETON.get(PlayerActivity.this).player.setPlayWhenReady(true);
                 invalidateOptionsMenu();
                 return true;
             case R.id.menu_pause:
-                Player.get(PlayerActivity.this).player.setPlayWhenReady(false);
+                Player.SINGLETON.get(PlayerActivity.this).player.setPlayWhenReady(false);
                 invalidateOptionsMenu();
                 return true;
             default:

@@ -38,17 +38,10 @@ public class Downloader {
         mDownloader = Schedulers.newThread();
     }
 
-    private static final Object SINGLETON_LOCK = new Object();
-    private static Downloader mSingleton = null;
-    public static Downloader get(Context context) {
-        if (mSingleton != null) {
-            return mSingleton;
+    public static final Singleton<Downloader> SINGLETON = new Singleton<Downloader>() {
+        @Override
+        Downloader newInstance(Context context) {
+            return new Downloader(context);
         }
-        synchronized (SINGLETON_LOCK) {
-            if (mSingleton == null) {
-                mSingleton = new Downloader(context.getApplicationContext());
-            }
-            return mSingleton;
-        }
-    }
+    };
 }
