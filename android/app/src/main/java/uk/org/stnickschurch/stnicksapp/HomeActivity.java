@@ -20,7 +20,6 @@ import butterknife.BindView;
 import io.reactivex.functions.Consumer;
 import uk.org.stnickschurch.stnicksapp.core.Player;
 import uk.org.stnickschurch.stnicksapp.core.Sermon;
-import uk.org.stnickschurch.stnicksapp.core.Store;
 
 public class HomeActivity extends BaseActivity {
     @BindView(R.id.toolbar) Toolbar mToolbar;
@@ -55,9 +54,6 @@ public class HomeActivity extends BaseActivity {
         switch (item.getItemId()) {
             case R.id.menu_settings:
                 startActivity(new Intent().setClass(this, SettingsActivity.class));
-                return true;
-            case R.id.menu_sync:
-                Store.SINGLETON.get(this).sync();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);

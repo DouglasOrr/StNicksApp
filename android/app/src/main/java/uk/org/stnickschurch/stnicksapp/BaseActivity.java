@@ -6,11 +6,12 @@ import android.support.v7.app.AppCompatActivity;
 import android.widget.Toast;
 
 import butterknife.ButterKnife;
+import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
-import uk.org.stnickschurch.stnicksapp.core.Errors;
+import uk.org.stnickschurch.stnicksapp.core.Events;
 
 public class BaseActivity extends AppCompatActivity {
     private CompositeDisposable mDisposables;
@@ -21,13 +22,14 @@ public class BaseActivity extends AppCompatActivity {
         ButterKnife.bind(this);
         mDisposables = new CompositeDisposable();
 
-        // Very basic error presentation (toasts are bad!)
-        disposeOnDestroy(Errors.SINGLETON.get(this).errors
+        // Very basic error/message presentation (toasts are bad!)
+        Events events = Events.SINGLETON.get(this);
+        disposeOnDestroy(Observable.merge(events.errors, events.messages)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Consumer<String>() {
                     @Override
-                    public void accept(String error) {
-                        Toast.makeText(BaseActivity.this, error, Toast.LENGTH_LONG).show();
+                    public void accept(String message) {
+                        Toast.makeText(BaseActivity.this, message, Toast.LENGTH_LONG).show();
                     }
                 }));
     }

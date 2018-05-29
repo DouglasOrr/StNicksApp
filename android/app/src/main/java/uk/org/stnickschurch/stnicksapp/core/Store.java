@@ -132,7 +132,7 @@ public class Store {
                             }
                         });
                     } else {
-                        Errors.SINGLETON.get(mContext).publish(R.string.error_download_not_found);
+                        Events.SINGLETON.get(mContext).publishError(R.string.error_download_not_found);
                     }
                 }
             }
@@ -165,16 +165,16 @@ public class Store {
                     public void onNext(JSONObject response) {
                         try {
                             List<Sermon> sermons = Sermon.readSermons(response);
-                            Utility.log("Syncing %d sermons", sermons.size());
                             mDatabase.sermons().sync(sermons);
                             mUpdates.onNext(UPDATE);
+                            Events.SINGLETON.get(mContext).publishMessage(R.string.message_sermons_refreshed);
                         } catch (JSONException e) {
-                            Errors.SINGLETON.get(mContext).publish(R.string.error_bad_sermon_list);
+                            Events.SINGLETON.get(mContext).publishError(R.string.error_bad_sermon_list);
                         }
                     }
                     @Override
                     public void onError(Throwable error) {
-                        Errors.SINGLETON.get(mContext).publish(R.string.error_no_sermon_list);
+                        Events.SINGLETON.get(mContext).publishError(R.string.error_no_sermon_list);
                     }
                 });
     }
@@ -214,7 +214,7 @@ public class Store {
     private void openDownload(long id) {
         Sermon sermon = mDatabase.downloads().findSermon(id);
         if (sermon == null) {
-            Errors.SINGLETON.get(mContext).publish(R.string.error_download_not_found);
+            Events.SINGLETON.get(mContext).publishError(R.string.error_download_not_found);
         } else {
             Player.SINGLETON.get(mContext).play(sermon);
         }

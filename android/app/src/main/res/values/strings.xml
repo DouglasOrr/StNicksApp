@@ -24,10 +24,12 @@
     <string name="sync_enabled_summary">Download a list of available sermons in the background every few days (warning: may consume mobile data)</string>
     <string name="sync_enabled_title">Sermon list background sync</string>
 
-    <!-- Errors -->
+    <!-- Events -->
     <string name="error_bad_sermon_list">Couldn\'t fetch sermons - bad data from server</string>
     <string name="error_no_sermon_list">Couldn\'t fetch sermons - no connection</string>
     <string name="error_download_not_found">Couldn\'t find downloaded sermon</string>
+    <string name="message_sermons_refreshed">Sermons list refreshed</string>
+    <string name="message_prayers_refreshed">Prayers refreshed</string>
 
     <!-- Behaviour -->
     <string name="sermons_list">https://stnicksapp.blob.core.windows.net/sermons/test.json</string>
