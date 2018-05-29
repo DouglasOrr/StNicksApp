@@ -129,10 +129,14 @@ public class Sermon {
     /**
      * The sermon description, for notifications & popups.
      */
-    public String userDescription() {
-        return Joiner.on("\n").join(
-                title,
-                speaker,
-                getTime().toString(USER_TIME_FORMAT));
+    public String userDescription(String separator) {
+        return Joiner.on(separator).join(title, speaker, userDate());
+    }
+
+    /**
+     * The date of the sermon.
+     */
+    public String userDate() {
+        return getTime().toString(USER_TIME_FORMAT);
     }
 }

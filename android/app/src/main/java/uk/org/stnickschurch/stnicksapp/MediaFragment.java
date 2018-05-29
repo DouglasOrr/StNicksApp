@@ -20,6 +20,7 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 import uk.org.stnickschurch.stnicksapp.core.Player;
@@ -52,7 +53,7 @@ public class MediaFragment extends Fragment {
             mTitle.setText(sermon.title);
             mPassage.setText(sermon.passage);
             mSpeaker.setText(sermon.speaker);
-            mTime.setText(sermon.getTime().toString(Sermon.USER_TIME_FORMAT));
+            mTime.setText(sermon.userDate());
         }
     }
 
@@ -83,7 +84,7 @@ public class MediaFragment extends Fragment {
         }
     }
 
-    private Disposable mSermonsListDisposable;
+    private CompositeDisposable mDisposeOnDestroy;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -94,10 +95,12 @@ public class MediaFragment extends Fragment {
         recycler.setLayoutManager(new LinearLayoutManager(inflater.getContext()));
         SermonListAdapter adapter = new SermonListAdapter();
         recycler.setAdapter(adapter);
-        mSermonsListDisposable = Store.SINGLETON.get(getContext())
+        mDisposeOnDestroy = new CompositeDisposable();
+        mDisposeOnDestroy.add(Store.SINGLETON.get(getContext())
                 .recentSermons()
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(adapter);
+                .subscribe(adapter)
+        );
 
         return root;
     }
@@ -105,13 +108,13 @@ public class MediaFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        mSermonsListDisposable.dispose();
+        mDisposeOnDestroy.dispose();
     }
 
     private void executeShowDialog(final Sermon sermon, Optional<SermonDownload> download) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
         builder.setTitle(sermon.userTitle());
-        builder.setMessage(sermon.userDescription());
+        builder.setMessage(sermon.userDescription("\n"));
 
         boolean hasRecord = download.isPresent();
         boolean hasFile = hasRecord && download.get().local_path != null;
@@ -144,8 +147,7 @@ public class MediaFragment extends Fragment {
     }
 
     private void showDialog(final Sermon sermon) {
-        // TODO: add to unsubscribe list?
-        Store.SINGLETON.get(getContext())
+        mDisposeOnDestroy.add(Store.SINGLETON.get(getContext())
                 .getDownload(sermon)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Consumer<Optional<SermonDownload>>() {
@@ -153,6 +155,6 @@ public class MediaFragment extends Fragment {
             public void accept(Optional<SermonDownload> download) {
                 executeShowDialog(sermon, download);
             }
-        });
+        }));
     }
 }

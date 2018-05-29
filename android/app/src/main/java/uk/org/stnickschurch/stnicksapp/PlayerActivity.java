@@ -57,7 +57,6 @@ public class PlayerActivity extends BaseActivity {
                 }
             }
         }, 0, Utility.getPeriodMs(getString(R.string.seekbar_refresh)));
-
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -87,22 +86,21 @@ public class PlayerActivity extends BaseActivity {
                 URLEncoder.encode(passage, "UTF-8"),
                 URLEncoder.encode("https://www.esv.org/", "UTF-8"));
         disposeOnDestroy(Downloader.SINGLETON.get(this).cachedGetRequest(
-                    url,
-                    ImmutableMap.of(
-                            "Authorization",
-                            "Token 7a226c2dcd345957fa82736b2f558d8c3126159e"),
-                    Utility.getPeriodMs(getString(R.string.passage_refresh))
-            )
-                    .subscribeOn(AndroidSchedulers.mainThread())
-                    .subscribe(new Consumer<JSONObject>() {
-                @Override
-                public void accept(JSONObject response) throws Exception {
-                    String passageHtml = response.getJSONArray("passages").getString(0);
-                    mBibleView.loadDataWithBaseURL("file:///android_asset/",
-                            getString(R.string.bible_html_header) + passageHtml,
-                            "text/html", "UTF-8", null);
-                }
-            }));
+                        url,
+                        ImmutableMap.of(
+                                "Authorization",
+                                "Token 7a226c2dcd345957fa82736b2f558d8c3126159e"),
+                        Utility.getPeriodMs(getString(R.string.passage_refresh)))
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<JSONObject>() {
+                    @Override
+                    public void accept(JSONObject response) throws Exception {
+                        String passageHtml = response.getJSONArray("passages").getString(0);
+                        mBibleView.loadDataWithBaseURL("file:///android_asset/",
+                                getString(R.string.bible_html_header) + passageHtml,
+                                "text/html", "UTF-8", null);
+                    }
+                }));
     }
 
     @Override

@@ -236,10 +236,9 @@ public class Store {
             Utility.log("Warning! couldn't find sermon for downloaded file %s", localPath);
             new File(localPath).delete();
         }
-
         // Notify for a sermon open
         if (sermon != null) {
-            Notifications.notifyDownloadComplete(mContext, sermon);
+            Notifications.SINGLETON.get(mContext).notifyDownloadComplete(sermon);
         } else {
             Utility.log("Warning! couldn't find sermon for downloaded file %s", localPath);
         }
@@ -251,7 +250,7 @@ public class Store {
                 .setDestinationUri(Uri.fromFile(local))
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
                 .setTitle(sermon.userTitle())
-                .setDescription(sermon.userDescription());
+                .setDescription(sermon.userDescription(", "));
         DownloadManager downloadManager = (DownloadManager) mContext.getSystemService(Context.DOWNLOAD_SERVICE);
         long downloadId = downloadManager.enqueue(request);
         mDatabase.downloads().start(new SermonDownload(sermon.id, downloadId));

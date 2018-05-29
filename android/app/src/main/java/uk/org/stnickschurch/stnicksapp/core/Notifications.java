@@ -10,11 +10,24 @@ import android.support.v4.app.NotificationCompat;
 import uk.org.stnickschurch.stnicksapp.PlayBroadcastReceiver;
 import uk.org.stnickschurch.stnicksapp.R;
 
+/**
+ * Creates & manages notifications to show to the user.
+ */
 public class Notifications {
-    public static String downloadChannel(Context context) {
+    private final Context mContext;
+
+    private Notifications(Context context) {
+        mContext = context;
+    }
+
+    private NotificationManager notificationManager() {
+        return (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
+    }
+
+    private String downloadChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             String id = "download";
-            notificationManager(context).createNotificationChannel(
+            notificationManager().createNotificationChannel(
                     new NotificationChannel(id, "Download", NotificationManager.IMPORTANCE_DEFAULT));
             return id;
         } else {
@@ -22,23 +35,25 @@ public class Notifications {
         }
     }
 
-    public static void notifyDownloadComplete(Context context, Sermon sermon) {
-        Utility.log("Notifying %s", sermon.userTitle());
+    public void notifyDownloadComplete(Sermon sermon) {
         int notificationId = sermon.hashCode();
-        Notification notification = new NotificationCompat.Builder(context, downloadChannel(context))
+        Notification notification = new NotificationCompat.Builder(mContext, downloadChannel())
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(sermon.userTitle())
-                .setContentText(sermon.userDescription())
-                .setContentIntent(PlayBroadcastReceiver.createIntent(context, sermon.id, notificationId))
+                .setContentText(sermon.userDescription(", "))
+                .setContentIntent(PlayBroadcastReceiver.createIntent(mContext, sermon.id, notificationId))
                 .build();
-        notificationManager(context).notify(sermon.id.hashCode(), notification);
+        notificationManager().notify(sermon.id.hashCode(), notification);
     }
 
-    public static void cancel(Context context, int notificationId) {
-        notificationManager(context).cancel(notificationId);
+    public void cancel(int notificationId) {
+        notificationManager().cancel(notificationId);
     }
 
-    private static NotificationManager notificationManager(Context context) {
-        return (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-    }
+    public static final Singleton<Notifications> SINGLETON = new Singleton<Notifications>() {
+        @Override
+        Notifications newInstance(Context context) {
+            return new Notifications(context);
+        }
+    };
 }

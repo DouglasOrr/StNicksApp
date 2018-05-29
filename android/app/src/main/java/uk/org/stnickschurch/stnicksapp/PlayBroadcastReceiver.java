@@ -20,7 +20,7 @@ public class PlayBroadcastReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(final Context context, Intent intent) {
-        Notifications.cancel(context, intent.getIntExtra(EXTRA_NOTIFICATION_ID, 0));
+        Notifications.SINGLETON.get(context).cancel(intent.getIntExtra(EXTRA_NOTIFICATION_ID, 0));
 
         final String sermonId = intent.getStringExtra(EXTRA_SERMON_ID);
         Store.SINGLETON.get(context)
