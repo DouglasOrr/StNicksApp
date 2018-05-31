@@ -6,70 +6,73 @@ import android.view.MenuItem;
 import android.webkit.WebView;
 import android.widget.SeekBar;
 
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.Timeline;
 import com.google.common.collect.ImmutableMap;
 
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import butterknife.BindView;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
 import uk.org.stnickschurch.stnicksapp.core.Downloader;
-import uk.org.stnickschurch.stnicksapp.core.Player;
-import uk.org.stnickschurch.stnicksapp.core.Sermon;
 import uk.org.stnickschurch.stnicksapp.core.Utility;
 
 public class PlayerActivity extends BaseActivity {
     @BindView(R.id.seekbar_player) SeekBar mSeekBar;
     @BindView(R.id.webview_player) WebView mBibleView;
-    private Timer mTimer;
+    private PlaybackService.Event mLastEvent = PlaybackService.Event.STOP;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         setContentView(R.layout.activity_player);
         super.onCreate(savedInstanceState);
 
-        disposeOnDestroy(Player.SINGLETON.get(this).playing.subscribe(new Consumer<Sermon>() {
-            @Override
-            public void accept(Sermon sermon) throws Exception {
-                getSupportActionBar().setTitle(sermon.passage);
-                loadPassage(sermon.passage);
-            }
-        }));
+        disposeOnDestroy(PlaybackService.Client.SINGLETON.get(this)
+                .events
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<PlaybackService.Event>() {
+                    @Override
+                    public void accept(PlaybackService.Event event) throws Exception {
+                        if (PlaybackService.ACTION_STOP.equals(event.action)) {
+                            finish();
+                        } else {
+                            // event.sermon should not be null
+                            if (!event.sermon.equals(mLastEvent.sermon)) {
+                                getSupportActionBar().setTitle(event.sermon.passage);
+                                loadPassage(event.sermon.passage);
+                            }
+                        }
+                        mLastEvent = event;
+                        invalidateOptionsMenu();
+                    }
+                }));
 
-        mTimer = new Timer("seekbar");
-        mTimer.scheduleAtFixedRate(new TimerTask() {
-            private Timeline.Window mWindow = new Timeline.Window();
-            @Override
-            public void run() {
-                ExoPlayer player = Player.SINGLETON.get(PlayerActivity.this).player;
-                if (!player.getCurrentTimeline().isEmpty()) {
-                    player.getCurrentTimeline().getWindow(player.getCurrentWindowIndex(), mWindow);
-                    mSeekBar.setMax((int) mWindow.getDurationMs());
-                    mSeekBar.setProgress((int) player.getCurrentPosition());
-                    mSeekBar.setSecondaryProgress((int) player.getBufferedPosition());
-                }
-            }
-        }, 0, Utility.getPeriodMs(getString(R.string.seekbar_refresh)));
+        disposeOnDestroy(PlaybackService.Client.SINGLETON.get(this)
+                .progress
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<PlaybackService.Progress>() {
+                    @Override
+                    public void accept(PlaybackService.Progress progress) {
+                        mSeekBar.setMax(progress.max);
+                        mSeekBar.setProgress(progress.position);
+                        mSeekBar.setSecondaryProgress(progress.buffer);
+                    }
+                }));
+
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    Player.SINGLETON.get(PlayerActivity.this).player.seekTo(progress);
+                    PlaybackService.Client.SINGLETON.get(PlayerActivity.this)
+                            .start(PlaybackService.ACTION_SEEK_TO, null, progress);
                 }
             }
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
+            public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
+            public void onStopTrackingTouch(SeekBar seekBar) { }
         });
     }
 
@@ -104,16 +107,9 @@ public class PlayerActivity extends BaseActivity {
     }
 
     @Override
-    protected void onDestroy() {
-        mTimer.cancel();
-        mTimer = null;
-        super.onDestroy();
-    }
-
-    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_player, menu);
-        boolean playing = Player.SINGLETON.get(PlayerActivity.this).player.getPlayWhenReady();
+        boolean playing = mLastEvent.action.equals(PlaybackService.ACTION_PLAY);
         menu.findItem(R.id.menu_play).setVisible(!playing);
         menu.findItem(R.id.menu_pause).setVisible(playing);
         return true;
@@ -121,14 +117,16 @@ public class PlayerActivity extends BaseActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        PlaybackService.Client client = PlaybackService.Client.SINGLETON.get(this);
         switch (item.getItemId()) {
             case R.id.menu_play:
-                Player.SINGLETON.get(PlayerActivity.this).player.setPlayWhenReady(true);
-                invalidateOptionsMenu();
+                client.start(PlaybackService.ACTION_PLAY, null, null);
                 return true;
             case R.id.menu_pause:
-                Player.SINGLETON.get(PlayerActivity.this).player.setPlayWhenReady(false);
-                invalidateOptionsMenu();
+                client.start(PlaybackService.ACTION_PAUSE, null, null);
+                return true;
+            case R.id.menu_stop:
+                client.start(PlaybackService.ACTION_STOP, null, null);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);

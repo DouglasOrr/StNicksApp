@@ -40,7 +40,7 @@ public class Downloader {
 
     public static final Singleton<Downloader> SINGLETON = new Singleton<Downloader>() {
         @Override
-        Downloader newInstance(Context context) {
+        protected Downloader newInstance(Context context) {
             return new Downloader(context);
         }
     };

@@ -5,12 +5,20 @@
     tools:context=".PlayerActivity">
     <item
         android:id="@+id/menu_play"
+        android:orderInCategory="10"
         android:icon="@drawable/ic_play"
         android:title="@string/menu_play_title"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/menu_pause"
+        android:orderInCategory="20"
         android:icon="@drawable/ic_pause"
         android:title="@string/menu_pause_title"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/menu_stop"
+        android:orderInCategory="30"
+        android:icon="@drawable/ic_stop"
+        android:title="@string/menu_stop_title"
         app:showAsAction="ifRoom" />
 </menu>

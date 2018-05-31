@@ -42,7 +42,8 @@
         <receiver
             android:name=".SyncBroadcastReceiver" />
 
-        <receiver
-            android:name=".PlayBroadcastReceiver" />
+        <service
+            android:name=".PlaybackService" />
+
     </application>
 </manifest>

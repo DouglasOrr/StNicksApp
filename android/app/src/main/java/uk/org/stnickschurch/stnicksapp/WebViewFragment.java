@@ -5,19 +5,21 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.ShareCompat;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import uk.org.stnickschurch.stnicksapp.core.Events;
 
+/**
+ * Base class for simple fragments that just contain a WebView to a fixed URL,
+ * and a refresh button in the menu.
+ */
 public abstract class WebViewFragment extends Fragment {
     /**
      * R.strings id for the message to show when the view is manually refreshed

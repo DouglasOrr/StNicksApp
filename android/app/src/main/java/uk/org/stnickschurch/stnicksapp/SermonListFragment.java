@@ -25,7 +25,6 @@ import butterknife.OnClick;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.functions.Consumer;
-import uk.org.stnickschurch.stnicksapp.core.Player;
 import uk.org.stnickschurch.stnicksapp.core.Sermon;
 import uk.org.stnickschurch.stnicksapp.core.SermonDownload;
 import uk.org.stnickschurch.stnicksapp.core.Store;
@@ -144,7 +143,8 @@ public class SermonListFragment extends Fragment {
                 new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
-                Player.SINGLETON.get(getContext()).play(sermon);
+                PlaybackService.Client.SINGLETON.get(getContext())
+                        .start(PlaybackService.ACTION_PLAY, sermon.id, null);
             }
         });
         if (hasFile) {

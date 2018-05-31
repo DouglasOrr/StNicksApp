@@ -35,6 +35,7 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
+import uk.org.stnickschurch.stnicksapp.PlaybackService;
 import uk.org.stnickschurch.stnicksapp.R;
 
 /**
@@ -216,7 +217,8 @@ public class Store {
         if (sermon == null) {
             Events.SINGLETON.get(mContext).publishError(R.string.error_download_not_found);
         } else {
-            Player.SINGLETON.get(mContext).play(sermon);
+            PlaybackService.Client.SINGLETON.get(mContext)
+                    .start(PlaybackService.ACTION_PLAY, sermon.id, null);
         }
     }
     private void finishDownload(long id) {
@@ -284,7 +286,7 @@ public class Store {
 
     public static final Singleton<Store> SINGLETON = new Singleton<Store>() {
         @Override
-        Store newInstance(Context context) {
+        protected Store newInstance(Context context) {
             return new Store(context);
         }
     };

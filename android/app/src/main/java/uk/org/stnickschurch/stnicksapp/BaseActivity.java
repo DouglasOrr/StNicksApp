@@ -14,13 +14,14 @@ import io.reactivex.functions.Consumer;
 import uk.org.stnickschurch.stnicksapp.core.Events;
 
 public class BaseActivity extends AppCompatActivity {
-    private CompositeDisposable mDisposables;
+    private CompositeDisposable mDisposeOnDestroy;
+    private CompositeDisposable mDisposeOnPause;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         ButterKnife.bind(this);
-        mDisposables = new CompositeDisposable();
+        mDisposeOnDestroy = new CompositeDisposable();
 
         // Very basic error/message presentation (toasts are bad!)
         Events events = Events.SINGLETON.get(this);
@@ -34,13 +35,29 @@ public class BaseActivity extends AppCompatActivity {
                 }));
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mDisposeOnPause = new CompositeDisposable();
+    }
+
     protected void disposeOnDestroy(Disposable disposable) {
-        mDisposables.add(disposable);
+        mDisposeOnDestroy.add(disposable);
+    }
+
+    protected void disposeOnPause(Disposable disposable) {
+        mDisposeOnPause.add(disposable);
+    }
+
+    @Override
+    protected void onPause() {
+        mDisposeOnPause.dispose();
+        super.onPause();
     }
 
     @Override
     protected void onDestroy() {
-        mDisposables.dispose();
+        mDisposeOnDestroy.dispose();
         super.onDestroy();
     }
 }

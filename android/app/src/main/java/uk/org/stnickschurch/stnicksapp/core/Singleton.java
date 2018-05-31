@@ -35,5 +35,5 @@ public abstract class Singleton<T> {
         }
     }
 
-    abstract T newInstance(Context context);
+    protected abstract T newInstance(Context context);
 }

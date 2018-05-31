@@ -20,7 +20,7 @@ public class Events {
     }
     public static final Singleton<Events> SINGLETON = new Singleton<Events>() {
         @Override
-        Events newInstance(Context context) {
+        protected Events newInstance(Context context) {
             return new Events(context);
         }
     };

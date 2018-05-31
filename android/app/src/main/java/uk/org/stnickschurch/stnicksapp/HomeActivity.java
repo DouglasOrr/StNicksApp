@@ -13,8 +13,6 @@ import android.view.MenuItem;
 
 import butterknife.BindView;
 import io.reactivex.functions.Consumer;
-import uk.org.stnickschurch.stnicksapp.core.Player;
-import uk.org.stnickschurch.stnicksapp.core.Sermon;
 
 public class HomeActivity extends BaseActivity {
     @BindView(R.id.toolbar) Toolbar mToolbar;
@@ -28,14 +26,26 @@ public class HomeActivity extends BaseActivity {
         setSupportActionBar(mToolbar);
         mViewPager.setAdapter(new SectionsPagerAdapter(getSupportFragmentManager()));
         mTabLayout.setupWithViewPager(mViewPager);
-
-        disposeOnDestroy(Player.SINGLETON.get(this).playing.subscribe(new Consumer<Sermon>() {
-            @Override
-            public void accept(Sermon sermon) {
-                startActivity(new Intent().setClass(HomeActivity.this, PlayerActivity.class));
-            }
-        }));
         SyncBroadcastReceiver.schedule(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // When the home screen is visible, playing a sermon should pop up the viewer activity
+        // automatically
+        disposeOnPause(PlaybackService.Client.SINGLETON.get(this)
+                .events
+                .skip(1)  // The "initial state" emitted by the BehaviorSubject
+                .subscribe(new Consumer<PlaybackService.Event>() {
+                    @Override
+                    public void accept(PlaybackService.Event event) {
+                        if (PlaybackService.ACTION_PLAY.equals(event.action)) {
+                            startActivity(new Intent()
+                                    .setClass(HomeActivity.this, PlayerActivity.class));
+                        }
+                    }
+                }));
     }
 
     @Override

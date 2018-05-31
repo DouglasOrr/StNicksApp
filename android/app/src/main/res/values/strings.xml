@@ -8,6 +8,7 @@
     <string name="menu_refresh_title">Refresh</string>
     <string name="menu_play_title">Play</string>
     <string name="menu_pause_title">Pause</string>
+    <string name="menu_stop_title">Stop</string>
 
     <!-- Sermon dialog -->
     <string name="sermon_dialog_play">Play</string>
@@ -23,6 +24,8 @@
     <!-- Settings -->
     <string name="sync_enabled_summary">Download a list of available sermons in the background every few days (warning: may consume mobile data)</string>
     <string name="sync_enabled_title">Sermon list background sync</string>
+    <string name="notification_channel_playback_name">Playback</string>
+    <string name="notification_channel_download_name">Download</string>
 
     <!-- Events -->
     <string name="error_bad_sermon_list">Couldn\'t fetch sermons - bad data from server</string>
