@@ -32,6 +32,7 @@ import io.reactivex.Single;
 import io.reactivex.SingleEmitter;
 import io.reactivex.SingleOnSubscribe;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
@@ -47,8 +48,11 @@ public class Store {
         @Query("SELECT * FROM sermon WHERE id = :id")
         abstract Sermon get(String id);
 
-        @Query("SELECT * FROM sermon ORDER BY time DESC")
-        abstract List<Sermon> recentSermons();
+        @Query("SELECT sermon.* FROM sermon" +
+                " LEFT JOIN sermon_download ON sermon.id=sermon_download.sermon_id" +
+                " WHERE (NOT :download_only) OR (sermon_download.local_path IS NOT NULL)" +
+                " ORDER BY time DESC")
+        public abstract List<Sermon> findSermons(boolean download_only);
 
         @Insert(onConflict = OnConflictStrategy.IGNORE)
         abstract void insertAll(List<Sermon> sermons);
@@ -140,13 +144,21 @@ public class Store {
         }, filter);
     }
 
-    public Observable<List<Sermon>> recentSermons() {
-        return mUpdates
-                .observeOn(Schedulers.io())
-                .map(new Function<Object, List<Sermon>>() {
+    public Observable<List<Sermon>> findSermons(Observable<SermonQuery> query) {
+        Observable<SermonQuery> queryOrUpdate = Observable.combineLatest(mUpdates, query,
+                new BiFunction<Object, SermonQuery, SermonQuery>() {
                     @Override
-                    public List<Sermon> apply(Object ignored) {
-                        return mDatabase.sermons().recentSermons();
+                    public SermonQuery apply(Object update, SermonQuery query) {
+                        return query;
+                    }
+                });
+        return queryOrUpdate
+                .observeOn(Schedulers.io())
+                .map(new Function<SermonQuery, List<Sermon>>() {
+                    @Override
+                    public List<Sermon> apply(SermonQuery sermonQuery) {
+                        Utility.log("TODO findSermons %s", sermonQuery);
+                        return mDatabase.sermons().findSermons(sermonQuery.downloaded_only);
                     }
                 });
     }

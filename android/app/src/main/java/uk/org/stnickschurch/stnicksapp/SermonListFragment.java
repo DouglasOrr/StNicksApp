@@ -23,12 +23,16 @@ import com.google.common.base.Optional;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.OnCheckedChanged;
 import butterknife.OnClick;
+import butterknife.OnTextChanged;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.functions.Consumer;
+import io.reactivex.subjects.BehaviorSubject;
 import uk.org.stnickschurch.stnicksapp.core.Sermon;
 import uk.org.stnickschurch.stnicksapp.core.SermonDownload;
+import uk.org.stnickschurch.stnicksapp.core.SermonQuery;
 import uk.org.stnickschurch.stnicksapp.core.Store;
 import uk.org.stnickschurch.stnicksapp.core.Utility;
 
@@ -88,6 +92,8 @@ public class SermonListFragment extends Fragment {
     }
 
     private CompositeDisposable mDisposeOnDestroy;
+    final BehaviorSubject<SermonQuery> mQuery = BehaviorSubject.createDefault(
+            new SermonQuery("", false));
     @BindView(R.id.sermon_list_items) RecyclerView mItems;
     @BindView(R.id.sermon_list_downloaded_switch) Switch mDownloadedSwitch;
     @BindView(R.id.sermon_list_filter) EditText mFilter;
@@ -124,7 +130,7 @@ public class SermonListFragment extends Fragment {
         SermonListAdapter adapter = new SermonListAdapter();
         mItems.setAdapter(adapter);
         mDisposeOnDestroy.add(Store.SINGLETON.get(getContext())
-                .recentSermons()
+                .findSermons(mQuery)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(adapter)
         );
@@ -139,8 +145,18 @@ public class SermonListFragment extends Fragment {
     }
 
     @OnClick(R.id.sermon_list_downloaded_switch_label)
-    public void clickDownloadedSwitch() {
+    public void clickDownloadedLabel() {
         mDownloadedSwitch.toggle();
+    }
+
+    @OnCheckedChanged(R.id.sermon_list_downloaded_switch)
+    public void changeDownloadedSwitch(boolean checked) {
+        mQuery.onNext(new SermonQuery(mQuery.getValue().search_text, checked));
+    }
+
+    @OnTextChanged(R.id.sermon_list_filter)
+    public void changeFilter(CharSequence text) {
+        mQuery.onNext(new SermonQuery(text.toString(), mQuery.getValue().downloaded_only));
     }
 
     private void executeShowDialog(final Sermon sermon, Optional<SermonDownload> download) {
