@@ -3,6 +3,11 @@
     <string name="app_name">St Nick\'s Church</string>
     <string name="title_activity_settings">Settings</string>
 
+    <!-- Home -->
+    <string name="section_sermons">Sermons</string>
+    <string name="section_calendar">Calendar</string>
+    <string name="section_prayer">Prayer</string>
+
     <!-- Menus -->
     <string name="menu_settings_title">Settings</string>
     <string name="menu_refresh_title">Refresh</string>
@@ -10,16 +15,15 @@
     <string name="menu_pause_title">Pause</string>
     <string name="menu_stop_title">Stop</string>
 
+    <!-- Sermon list -->
+    <string name="filter_hint">passage or title</string>
+    <string name="filter_downloaded_label">Downloaded</string>
+
     <!-- Sermon dialog -->
     <string name="sermon_dialog_play">Play</string>
     <string name="sermon_dialog_download">Download</string>
     <string name="sermon_dialog_retry">Retry</string>
     <string name="sermon_dialog_delete">Delete</string>
-
-    <!-- Home -->
-    <string name="section_sermons">Sermons</string>
-    <string name="section_calendar">Calendar</string>
-    <string name="section_prayer">Prayer</string>
 
     <!-- Settings -->
     <string name="sync_enabled_summary">Download a list of available sermons in the background every few days (warning: may consume mobile data)</string>

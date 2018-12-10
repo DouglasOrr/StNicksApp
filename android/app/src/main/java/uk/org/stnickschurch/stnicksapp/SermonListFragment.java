@@ -14,6 +14,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import com.google.common.base.Objects;
@@ -86,6 +88,9 @@ public class SermonListFragment extends Fragment {
     }
 
     private CompositeDisposable mDisposeOnDestroy;
+    @BindView(R.id.sermon_list_items) RecyclerView mItems;
+    @BindView(R.id.sermon_list_downloaded_switch) Switch mDownloadedSwitch;
+    @BindView(R.id.sermon_list_filter) EditText mFilter;
 
     public SermonListFragment() {
         setHasOptionsMenu(true);
@@ -112,17 +117,17 @@ public class SermonListFragment extends Fragment {
                              ViewGroup container,
                              Bundle savedInstanceState) {
         final View root = inflater.inflate(R.layout.fragment_sermon_list, container, false);
-        RecyclerView recycler = root.findViewById(R.id.recyclerview_media);
-        recycler.setLayoutManager(new LinearLayoutManager(inflater.getContext()));
-        SermonListAdapter adapter = new SermonListAdapter();
-        recycler.setAdapter(adapter);
+        ButterKnife.bind(this, root);
         mDisposeOnDestroy = new CompositeDisposable();
+
+        mItems.setLayoutManager(new LinearLayoutManager(inflater.getContext()));
+        SermonListAdapter adapter = new SermonListAdapter();
+        mItems.setAdapter(adapter);
         mDisposeOnDestroy.add(Store.SINGLETON.get(getContext())
                 .recentSermons()
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(adapter)
         );
-
         return root;
     }
 
@@ -130,6 +135,12 @@ public class SermonListFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         mDisposeOnDestroy.dispose();
+        mDisposeOnDestroy = null;
+    }
+
+    @OnClick(R.id.sermon_list_downloaded_switch_label)
+    public void clickDownloadedSwitch() {
+        mDownloadedSwitch.toggle();
     }
 
     private void executeShowDialog(final Sermon sermon, Optional<SermonDownload> download) {
