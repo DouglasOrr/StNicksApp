@@ -1,4 +1,4 @@
-package uk.org.stnickschurch.stnicksapp.core;
+package uk.org.stnickschurch.stnicksapp.core.old;
 
 import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Entity;
@@ -18,6 +18,8 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import uk.org.stnickschurch.stnicksapp.core.Utility;
 
 /**
  * Basic data type for Sermon metadata that is synced from a server data store.

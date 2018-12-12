@@ -30,11 +30,11 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.functions.Consumer;
 import io.reactivex.subjects.BehaviorSubject;
-import uk.org.stnickschurch.stnicksapp.core.Sermon;
-import uk.org.stnickschurch.stnicksapp.core.SermonDownload;
-import uk.org.stnickschurch.stnicksapp.core.SermonQuery;
-import uk.org.stnickschurch.stnicksapp.core.Store;
 import uk.org.stnickschurch.stnicksapp.core.Utility;
+import uk.org.stnickschurch.stnicksapp.core.old.OldStore;
+import uk.org.stnickschurch.stnicksapp.core.old.Sermon;
+import uk.org.stnickschurch.stnicksapp.core.old.SermonDownload;
+import uk.org.stnickschurch.stnicksapp.data.SermonQuery;
 
 public class SermonListFragment extends Fragment {
     public class SermonViewHolder extends RecyclerView.ViewHolder {
@@ -111,7 +111,7 @@ public class SermonListFragment extends Fragment {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_refresh_sermons:
-                Store.SINGLETON.get(getContext()).sync();
+                OldStore.SINGLETON.get(getContext()).sync();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -129,7 +129,7 @@ public class SermonListFragment extends Fragment {
         mItems.setLayoutManager(new LinearLayoutManager(inflater.getContext()));
         SermonListAdapter adapter = new SermonListAdapter();
         mItems.setAdapter(adapter);
-        mDisposeOnDestroy.add(Store.SINGLETON.get(getContext())
+        mDisposeOnDestroy.add(OldStore.SINGLETON.get(getContext())
                 .findSermons(mQuery)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(adapter)
@@ -179,7 +179,7 @@ public class SermonListFragment extends Fragment {
                     new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialogInterface, int i) {
-                    Store.SINGLETON.get(getContext()).delete(sermon);
+                    OldStore.SINGLETON.get(getContext()).delete(sermon);
                 }
             });
         } else {
@@ -188,7 +188,7 @@ public class SermonListFragment extends Fragment {
                     new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialogInterface, int i) {
-                    Store.SINGLETON.get(getContext()).download(sermon);
+                    OldStore.SINGLETON.get(getContext()).download(sermon);
                 }
             });
         }
@@ -196,7 +196,7 @@ public class SermonListFragment extends Fragment {
     }
 
     private void showDialog(final Sermon sermon) {
-        mDisposeOnDestroy.add(Store.SINGLETON.get(getContext())
+        mDisposeOnDestroy.add(OldStore.SINGLETON.get(getContext())
                 .getDownload(sermon)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Consumer<Optional<SermonDownload>>() {

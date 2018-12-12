@@ -14,7 +14,7 @@ In God's providence, this is our prayer for the work of St Nick's & by making it
 
 ## Contributing
 
-I propose the following process:
+We use the following process:
 
  - **issue tracking** - GitHub issues on this project
  - **contributing** - fork & pull request
@@ -46,3 +46,10 @@ Creating a storage account suitable for uploading sermon metadata, using an Azur
  - Secure transfer required: `Disabled`
  - Resource group `stnicksapp`
  - Location: `West Europe`
+
+### Uploading sermon metadata
+
+Install [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest), and run (with `CONNECTION_STRING` from Access Keys in the Azure console):
+
+    cat test_v1.json | jq -c . | gzip -c > test_v1.json.gz
+    az storage blob upload -c sermons -n test_v1.json.gz -f test_v1.json.gz --content-encoding gzip --connection-string CONNECTION_STRING

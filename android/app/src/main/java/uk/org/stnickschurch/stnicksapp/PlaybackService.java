@@ -29,10 +29,10 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
 import io.reactivex.subjects.BehaviorSubject;
 import uk.org.stnickschurch.stnicksapp.core.Notifications;
-import uk.org.stnickschurch.stnicksapp.core.Sermon;
 import uk.org.stnickschurch.stnicksapp.core.Singleton;
-import uk.org.stnickschurch.stnicksapp.core.Store;
 import uk.org.stnickschurch.stnicksapp.core.Utility;
+import uk.org.stnickschurch.stnicksapp.core.old.OldStore;
+import uk.org.stnickschurch.stnicksapp.core.old.Sermon;
 
 public class PlaybackService extends Service {
     /**
@@ -223,7 +223,7 @@ public class PlaybackService extends Service {
             final @NonNull Sermon activeSermon = sermon != null ? sermon : oldSermon;
             if (ACTION_PLAY.equals(action)) {
                 if (!activeSermon.equals(oldSermon)) {
-                    Store.SINGLETON.get(this)
+                    OldStore.SINGLETON.get(this)
                             .getLocalOrRemoteAudio(sermon)
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe(new Consumer<Uri>() {
@@ -258,7 +258,7 @@ public class PlaybackService extends Service {
         if (intent != null) {
             final String action = intent.getAction();
             final int seekToPosition = intent.getIntExtra(EXTRA_SEEK_TO_POSITION, 0);
-            Store.SINGLETON.get(this)
+            OldStore.SINGLETON.get(this)
                     .getSermon(intent.getStringExtra(EXTRA_SERMON_ID))
                     .subscribe(new Consumer<Optional<Sermon>>() {
                         @Override

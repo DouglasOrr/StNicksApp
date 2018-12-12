@@ -5,8 +5,10 @@ import android.support.v7.recyclerview.extensions.ListAdapter;
 import android.support.v7.util.DiffUtil;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.util.Pair;
 
 import com.android.volley.AuthFailureError;
+import com.android.volley.BuildConfig;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -35,6 +37,7 @@ import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.Scheduler;
+import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Consumer;
 import io.reactivex.subjects.BehaviorSubject;
 
@@ -184,6 +187,27 @@ public class Utility {
         public ReallyBadError(String message, Throwable cause) {
             super(message, cause);
         }
+    }
+
+    public static <T extends Exception> void nonFatal(T e) throws T {
+        if (BuildConfig.DEBUG) {
+            throw e;
+        } else {
+            Utility.log("Caught nonfatal error %s", e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Create a bifunction that puts the arguments in an android.util.Pair.
+     */
+    public static <A, B> BiFunction<A, B, Pair<A, B>> toPair() {
+        return new BiFunction<A, B, Pair<A, B>>() {
+            @Override
+            public Pair<A, B> apply(A a, B b) throws Exception {
+                return new Pair<>(a, b);
+            }
+        };
     }
 
     /**

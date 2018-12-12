@@ -10,13 +10,13 @@ import android.preference.PreferenceManager;
 
 import java.util.Random;
 
-import uk.org.stnickschurch.stnicksapp.core.Store;
 import uk.org.stnickschurch.stnicksapp.core.Utility;
+import uk.org.stnickschurch.stnicksapp.core.old.OldStore;
 
 public class SyncBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
-        Store.SINGLETON.get(context).sync();
+        OldStore.SINGLETON.get(context).sync();
     }
 
     public static void schedule(Context context) {

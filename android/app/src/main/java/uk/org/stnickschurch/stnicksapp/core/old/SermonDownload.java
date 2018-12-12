@@ -1,4 +1,4 @@
-package uk.org.stnickschurch.stnicksapp.core;
+package uk.org.stnickschurch.stnicksapp.core.old;
 
 import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Entity;

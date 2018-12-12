@@ -13,6 +13,7 @@ import android.support.v4.app.NotificationCompat;
 import uk.org.stnickschurch.stnicksapp.PlaybackService;
 import uk.org.stnickschurch.stnicksapp.PlayerActivity;
 import uk.org.stnickschurch.stnicksapp.R;
+import uk.org.stnickschurch.stnicksapp.core.old.Sermon;
 
 /**
  * Creates & manages notifications to show to the user.
