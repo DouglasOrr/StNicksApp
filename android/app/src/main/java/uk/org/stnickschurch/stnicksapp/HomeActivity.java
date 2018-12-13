@@ -10,6 +10,7 @@ import android.support.v4.view.ViewPager;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.WindowManager;
 
 import butterknife.BindView;
 import io.reactivex.functions.Consumer;
@@ -24,6 +25,8 @@ public class HomeActivity extends BaseActivity {
         setContentView(R.layout.activity_home);
         super.onCreate(savedInstanceState);
         setSupportActionBar(mToolbar);
+        // don't show soft keyboard on startup
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
         mViewPager.setAdapter(new SectionsPagerAdapter(getSupportFragmentManager()));
         mTabLayout.setupWithViewPager(mViewPager);
         SyncBroadcastReceiver.schedule(this);

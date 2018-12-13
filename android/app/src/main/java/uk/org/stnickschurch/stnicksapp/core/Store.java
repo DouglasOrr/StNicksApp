@@ -1,29 +1,24 @@
 package uk.org.stnickschurch.stnicksapp.core;
 
-import android.app.DownloadManager;
-import android.arch.persistence.room.Dao;
-import android.arch.persistence.room.Database;
-import android.arch.persistence.room.Insert;
-import android.arch.persistence.room.OnConflictStrategy;
-import android.arch.persistence.room.Query;
-import android.arch.persistence.room.Room;
-import android.arch.persistence.room.RoomDatabase;
-import android.arch.persistence.room.Transaction;
-import android.content.BroadcastReceiver;
+import android.content.ContentValues;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
+import android.database.sqlite.SQLiteOpenHelper;
 import android.net.Uri;
+import android.util.LongSparseArray;
+import android.util.Pair;
 
-import com.google.common.base.Optional;
-import com.google.common.io.Files;
-
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import io.reactivex.Observable;
@@ -32,135 +27,71 @@ import io.reactivex.Single;
 import io.reactivex.SingleEmitter;
 import io.reactivex.SingleOnSubscribe;
 import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
-import uk.org.stnickschurch.stnicksapp.PlaybackService;
 import uk.org.stnickschurch.stnicksapp.R;
+import uk.org.stnickschurch.stnicksapp.data.ListRefresh;
+import uk.org.stnickschurch.stnicksapp.data.Sermon;
+import uk.org.stnickschurch.stnicksapp.data.SermonQuery;
+import uk.org.stnickschurch.stnicksapp.data.StringWithSnippet;
 
 /**
- * Manages a local database, that can be periodically synced with the server.
+ * Data store for sermon metadata, for syncing, and for local audio downloads.
  */
 public class Store {
-    @Dao
-    static abstract class SermonDao {
-        @Query("SELECT * FROM sermon WHERE id = :id")
-        abstract Sermon get(String id);
-
-        @Query("SELECT sermon.* FROM sermon" +
-                " LEFT JOIN sermon_download ON sermon.id=sermon_download.sermon_id" +
-                " WHERE (NOT :download_only) OR (sermon_download.local_path IS NOT NULL)" +
-                " ORDER BY time DESC")
-        public abstract List<Sermon> findSermons(boolean download_only);
-
-        @Insert(onConflict = OnConflictStrategy.IGNORE)
-        abstract void insertAll(List<Sermon> sermons);
-
-        @Query("DELETE FROM sermon WHERE id NOT IN (:ids)")
-        abstract void keepOnly(List<String> ids);
-
-        @Transaction
-        void sync(List<Sermon> sermons) {
-            insertAll(sermons);
-            List<String> ids = new ArrayList<>(sermons.size());
-            for (Sermon sermon : sermons) {
-                ids.add(sermon.id);
-            }
-            keepOnly(ids);
-        }
-    }
-    @Dao
-    static abstract class DownloadDao {
-        @Insert(onConflict = OnConflictStrategy.REPLACE)
-        abstract void start(SermonDownload sermonDownload);
-
-        @Query("UPDATE sermon_download" +
-               " SET local_path = :local_path, download_id = NULL" +
-               " WHERE download_id = :download_id")
-        abstract int finish(long download_id, String local_path);
-
-        @Query("SELECT * FROM sermon_download WHERE sermon_id = :sermon_id")
-        abstract SermonDownload get(String sermon_id);
-
-        @Query("SELECT sermon.* FROM sermon" +
-                " JOIN sermon_download ON sermon.id=sermon_download.sermon_id" +
-                " WHERE sermon_download.download_id = :download_id")
-        abstract Sermon findSermon(long download_id);
-
-        @Query("DELETE FROM sermon_download WHERE sermon_id = :sermon_id")
-        abstract void delete(String sermon_id);
-    }
-
-    @Database(entities = {Sermon.class, SermonDownload.class}, version = 5)
-    static abstract class AppDatabase extends RoomDatabase {
-        public abstract SermonDao sermons();
-        public abstract DownloadDao downloads();
-    }
-
     private final Context mContext;
-    private final AppDatabase mDatabase;
-    private static final Object UPDATE = new Object();  // Just a marker object
-    private final BehaviorSubject<Object> mUpdates = BehaviorSubject.createDefault(UPDATE);
+    private final Db mDatabaseHelper;
+    private final BehaviorSubject<Integer> mUpdates = BehaviorSubject.createDefault(0);
 
-    private Store(Context context) {
-        mContext = context;
-        // We think we can fall back to destructive migration, as this database is essentially
-        // just a cache
-        mDatabase = Room.databaseBuilder(
-                context, AppDatabase.class,"stnicksapp-core"
-        ).fallbackToDestructiveMigration().build();
+    // API
 
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
-        filter.addAction(DownloadManager.ACTION_NOTIFICATION_CLICKED);
-        mContext.registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                final String action = intent.getAction();
-                if (DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(action)) {
-                    final long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, 0L);
-                    Schedulers.io().scheduleDirect(new Runnable() {
-                        @Override
-                        public void run() {
-                            finishDownload(id);
-                        }
-                    });
-                } else if (DownloadManager.ACTION_NOTIFICATION_CLICKED.equals(action)) {
-                    long[] ids = intent.getLongArrayExtra(DownloadManager.EXTRA_NOTIFICATION_CLICK_DOWNLOAD_IDS);
-                    if (ids.length == 1) {
-                        final long id = ids[0];
-                        Schedulers.io().scheduleDirect(new Runnable() {
-                            @Override
-                            public void run() {
-                                openDownload(id);
-                            }
-                        });
-                    } else {
-                        Events.SINGLETON.get(mContext).publishError(R.string.error_download_not_found);
+    public Observable<List<Sermon>> listSermons(Observable<SermonQuery> query) {
+        return Observable.combineLatest(query, mUpdates, Utility.toPair())
+                .distinctUntilChanged()
+                .observeOn(Schedulers.io())
+                .map(new Function<Pair<SermonQuery, Integer>, List<Sermon>>() {
+                    @Override
+                    public List<Sermon> apply(Pair<SermonQuery, Integer> queryUpdate) {
+                        return doListSermons(mDatabaseHelper.getReadableDatabase(), queryUpdate.first);
                     }
+                });
+    }
+
+    public Single<Sermon> getSermon(long id) {
+        return Single.create(new SingleOnSubscribe<Sermon>() {
+            @Override
+            public void subscribe(SingleEmitter<Sermon> emitter) {
+                Sermon sermon = doGetSermon(mDatabaseHelper.getReadableDatabase(), id);
+                if (sermon != null) {
+                    emitter.onSuccess(sermon);
+                } else {
+                    emitter.onError(new IllegalStateException("Cannot find sermon for ID " + id));
                 }
             }
-        }, filter);
+        }).subscribeOn(Schedulers.io());
     }
 
-    public Observable<List<Sermon>> findSermons(Observable<SermonQuery> query) {
-        Observable<SermonQuery> queryOrUpdate = Observable.combineLatest(mUpdates, query,
-                new BiFunction<Object, SermonQuery, SermonQuery>() {
-                    @Override
-                    public SermonQuery apply(Object update, SermonQuery query) {
-                        return query;
-                    }
-                });
-        return queryOrUpdate
-                .observeOn(Schedulers.io())
-                .map(new Function<SermonQuery, List<Sermon>>() {
-                    @Override
-                    public List<Sermon> apply(SermonQuery sermonQuery) {
-                        Utility.log("TODO findSermons %s", sermonQuery);
-                        return mDatabase.sermons().findSermons(sermonQuery.downloaded_only);
-                    }
-                });
+    /**
+     * Get the local or remote audio Uri for the sermon.
+     * @param forceRemote if true, don't return a local file Uri, even if the sermon is downloaded
+     */
+    public Single<Uri> getAudio(long id, boolean forceRemote) {
+        return Single.create(new SingleOnSubscribe<Uri>() {
+            @Override
+            public void subscribe(SingleEmitter<Uri> emitter) {
+                Uri uri = doGetAudio(mDatabaseHelper.getReadableDatabase(), id, forceRemote);
+                if (uri != null) {
+                    emitter.onSuccess(uri);
+                } else {
+                    emitter.onError(new IllegalStateException("Cannot find audio for ID " + id));
+                }
+            }
+        }).subscribeOn(Schedulers.io());
+    }
+
+    private void tick() {
+        mUpdates.onNext(mUpdates.getValue() + 1);
     }
 
     public void sync() {
@@ -177,123 +108,400 @@ public class Store {
                     @Override
                     public void onNext(JSONObject response) {
                         try {
-                            List<Sermon> sermons = Sermon.readSermons(response);
-                            mDatabase.sermons().sync(sermons);
-                            mUpdates.onNext(UPDATE);
-                            Events.SINGLETON.get(mContext).publishMessage(R.string.message_sermons_refreshed);
+                            ListRefresh stats = doSync(mDatabaseHelper.getWritableDatabase(), response);
+                            Events.SINGLETON.get(mContext).publish(Events.Level.INFO, R.string.message_sermons_refreshed,
+                                    stats.added, stats.updated, stats.removed);
+                            tick();
                         } catch (JSONException e) {
-                            Events.SINGLETON.get(mContext).publishError(R.string.error_bad_sermon_list);
+                            Events.SINGLETON.get(mContext).publish(Events.Level.ERROR, R.string.error_bad_sermon_list);
                         }
                     }
                     @Override
                     public void onError(Throwable error) {
-                        Events.SINGLETON.get(mContext).publishError(R.string.error_no_sermon_list);
+                        Events.SINGLETON.get(mContext).publish(Events.Level.ERROR, R.string.error_no_sermon_list);
                     }
                 });
     }
 
-    public Single<Uri> getLocalOrRemoteAudio(final Sermon sermon) {
-        return Single.create(new SingleOnSubscribe<Uri>() {
+    public void startDownload(long id, long downloadId) {
+        Schedulers.io().scheduleDirect(new Runnable() {
             @Override
-            public void subscribe(SingleEmitter<Uri> emitter) {
-                SermonDownload download = mDatabase.downloads().get(sermon.id);
-                if (download != null && download.local_path != null) {
-                    emitter.onSuccess(Uri.fromFile(new File(download.local_path)));
+            public void run() {
+                doStartDownload(mDatabaseHelper.getWritableDatabase(), id, downloadId);
+            }
+        });
+    }
+
+    public Single<Sermon> finishDownload(long downloadId, File localPath) {
+        return Single.create(new SingleOnSubscribe<Sermon>() {
+            @Override
+            public void subscribe(SingleEmitter<Sermon> emitter) {
+                Sermon sermon = doFinishDownload(mDatabaseHelper.getWritableDatabase(), downloadId, localPath);
+                if (sermon != null) {
+                    emitter.onSuccess(sermon);
+                    tick();
                 } else {
-                    emitter.onSuccess(Uri.parse(sermon.audio));
+                    emitter.onError(new IllegalStateException("Cannot find sermon for download ID " + downloadId));
                 }
             }
         }).subscribeOn(Schedulers.io());
     }
 
-    public Single<Optional<SermonDownload>> getDownload(final Sermon sermon) {
-        return Single.create(new SingleOnSubscribe<Optional<SermonDownload>>() {
-            @Override
-            public void subscribe(SingleEmitter<Optional<SermonDownload>> emitter) {
-                emitter.onSuccess(Optional.fromNullable(mDatabase.downloads().get(sermon.id)));
-            }
-        }).subscribeOn(Schedulers.io());
-    }
-
-    public Single<Optional<Sermon>> getSermon(final String id) {
-        return Single.create(new SingleOnSubscribe<Optional<Sermon>>() {
-            @Override
-            public void subscribe(SingleEmitter<Optional<Sermon>> emitter) {
-                emitter.onSuccess(Optional.fromNullable(mDatabase.sermons().get(id)));
-            }
-        }).subscribeOn(Schedulers.io());
-    }
-
-    private void openDownload(long id) {
-        Sermon sermon = mDatabase.downloads().findSermon(id);
-        if (sermon == null) {
-            Events.SINGLETON.get(mContext).publishError(R.string.error_download_not_found);
-        } else {
-            PlaybackService.Client.SINGLETON.get(mContext)
-                    .start(PlaybackService.ACTION_PLAY, sermon.id, null);
-        }
-    }
-    private void finishDownload(long id) {
-        DownloadManager downloadManager =
-                (DownloadManager) mContext.getSystemService(Context.DOWNLOAD_SERVICE);
-        Cursor cursor = downloadManager.query(new DownloadManager.Query().setFilterById(id));
-        if (!cursor.moveToFirst()) {
-            Utility.log("Error! couldn't find downloaded file");
-            return;
-        }
-        String localUri = cursor.getString(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI));
-        String localPath = Uri.parse(localUri).getPath();
-        // We must do this before .finish(), as the link is broken
-        Sermon sermon = mDatabase.downloads().findSermon(id);
-        if (mDatabase.downloads().finish(id, localPath) == 0) {
-            // Something else has happened, and the download doesn't match - we don't need the "orphaned" file anymore
-            Utility.log("Warning! couldn't find sermon for downloaded file %s", localPath);
-            new File(localPath).delete();
-        }
-        // Notify for a sermon open
-        if (sermon != null) {
-            Notifications.SINGLETON.get(mContext).notifyDownloadComplete(sermon);
-        } else {
-            Utility.log("Warning! couldn't find sermon for downloaded file %s", localPath);
-        }
-    }
-    private void executeDownload(Sermon sermon) {
-        File local = new File(mContext.getExternalFilesDir("sermons"),
-                sermon.title + "." + Files.getFileExtension(sermon.audio));
-        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(sermon.audio))
-                .setDestinationUri(Uri.fromFile(local))
-                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-                .setTitle(sermon.userTitle())
-                .setDescription(sermon.userDescription(", "));
-        DownloadManager downloadManager = (DownloadManager) mContext.getSystemService(Context.DOWNLOAD_SERVICE);
-        long downloadId = downloadManager.enqueue(request);
-        mDatabase.downloads().start(new SermonDownload(sermon.id, downloadId));
-    }
-    public void download(final Sermon sermon) {
+    public void deleteDownload(long id) {
         Schedulers.io().scheduleDirect(new Runnable() {
             @Override
             public void run() {
-                executeDownload(sermon);
+                File local = doDeleteDownload(mDatabaseHelper.getWritableDatabase(), id);
+                if (local != null) {
+                    local.delete();
+                    tick();
+                }
             }
         });
     }
 
-    private void executeDelete(Sermon sermon) {
-        SermonDownload download = mDatabase.downloads().get(sermon.id);
-        if (download != null) {
-            if (download.local_path != null) {
-                new File(download.local_path).delete();
-                mDatabase.downloads().delete(sermon.id);
+    // Database
+
+    static final DateTimeFormatter ISO_TIME_FORMAT =
+            ISODateTimeFormat.dateTimeNoMillis().withOffsetParsed();
+
+    static class Db extends SQLiteOpenHelper {
+        public Db(Context context, String name) {
+            super(context, name, null, 1);
+        }
+
+        public static String selectSnippet(String column) {
+            int columnId;
+            if ("passage".equals(column)) {
+                columnId = 0;
+            } else if ("series".equals(column)) {
+                columnId = 1;
+            } else if ("title".equals(column)) {
+                columnId = 2;
+            } else if ("speaker".equals(column)) {
+                columnId = 3;
+            } else {
+                throw new IllegalArgumentException("Unexpected column " + column);
+            }
+            return "snippet(sermon_fts, \"<b>\", \"</b>\", \"<b>...</b>\", " + columnId + ", -64)";
+        }
+
+        @Override
+        public void onCreate(SQLiteDatabase db) {
+            // WARNING: DO NOT CHANGE THIS WITHOUT UPDATING THE VERSION NUMBER & onUpgrade()
+
+            db.execSQL("CREATE TABLE sermon (" +
+                    " _id INTEGER PRIMARY KEY," +
+                    " passage TEXT NOT NULL," +
+                    " time TEXT NOT NULL," +
+                    " series TEXT NOT NULL," +
+                    " title TEXT NOT NULL," +
+                    " speaker TEXT NOT NULL," +
+                    " audio TEXT NOT NULL)");
+
+            db.execSQL("CREATE TABLE sync (" +
+                    " sermon_id INTEGER PRIMARY KEY," +
+                    " hash TEXT NOT NULL," +
+                    " FOREIGN KEY(sermon_id) REFERENCES sermon(_id) ON DELETE CASCADE)");
+
+            db.execSQL("CREATE TABLE download (" +
+                    " sermon_id INTEGER PRIMARY KEY," +
+                    " download_id INTEGER," +
+                    " local_path TEXT," +
+                    " FOREIGN KEY(sermon_id) REFERENCES sermon(_id) ON DELETE CASCADE)");
+
+            // FTS table & triggers
+            db.execSQL("CREATE VIRTUAL TABLE sermon_fts USING FTS4 (" +
+                    " content=\"sermon\"," +
+                    " passage, series, title, speaker)"); // WARNING - REORDERING => selectSnippet()
+            final String delete = "BEGIN DELETE FROM sermon_fts WHERE docid=old._id ; END";
+            db.execSQL("CREATE TRIGGER sermon_before_update BEFORE UPDATE ON sermon " + delete);
+            db.execSQL("CREATE TRIGGER sermon_before_delete BEFORE DELETE ON sermon " + delete);
+            final String insert = "BEGIN INSERT INTO sermon_fts(docid, passage, series, title, speaker)" +
+                    " VALUES (new._id, new.passage, new.series, new.title, new.speaker) ; END";
+            db.execSQL("CREATE TRIGGER sermon_after_update AFTER UPDATE ON sermon " + insert);
+            db.execSQL("CREATE TRIGGER sermon_after_insert AFTER INSERT ON sermon " + insert);
+        }
+
+        @Override
+        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            throw new SQLiteException("Upgrade not supported");
+        }
+    }
+
+    private static LongSparseArray<String> readSyncData(SQLiteDatabase db) {
+        Cursor cursor = null;
+        try {
+            LongSparseArray<String> result = new LongSparseArray<>();
+            cursor = db.rawQuery("SELECT * FROM sync", null);
+            final int sermonId = cursor.getColumnIndexOrThrow("sermon_id");
+            final int hash = cursor.getColumnIndexOrThrow("hash");
+            while (cursor.moveToNext()) {
+                result.put(cursor.getLong(sermonId), cursor.getString(hash));
+            }
+            return result;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
             }
         }
     }
-    public void delete(final Sermon sermon) {
-        Schedulers.io().scheduleDirect(new Runnable() {
-            @Override
-            public void run() {
-                executeDelete(sermon);
+
+    static ListRefresh doSync(SQLiteDatabase db, JSONObject response)
+            throws JSONException {
+        int added = 0, updated = 0, removed = 0;
+        db.beginTransaction();
+        try {
+            final LongSparseArray<String> syncData = readSyncData(db);
+            final HashSet<Long> newSermonIds = new HashSet<>();
+            final JSONArray sermons = response.getJSONArray("sermons");
+            for (int i = 0; i < sermons.length(); ++i) {
+                JSONObject sermon = sermons.getJSONObject(i);
+                // Core properties
+                long id = sermon.getLong("id");
+                String passage = sermon.getString("passage");
+                String time = sermon.getString("time");
+                String series = sermon.getString("series");
+                String title = sermon.getString("title");
+                String speaker = sermon.getString("speaker");
+                String audio = sermon.getString("audio");
+                // Determine if we need to update
+                String oldHash = syncData.get(id);
+                String newHash = Utility.md5(passage, time, series, title, speaker, audio);
+                // Perform the insert/update
+                if (oldHash == null || !oldHash.equals(newHash)) {
+                    ContentValues sermonContent = new ContentValues(7);
+                    sermonContent.put("passage", passage);
+                    sermonContent.put("time", time);
+                    sermonContent.put("series", series);
+                    sermonContent.put("title", title);
+                    sermonContent.put("speaker", speaker);
+                    sermonContent.put("audio", audio);
+                    if (oldHash == null) {
+                        sermonContent.put("_id", id);
+                        db.insertWithOnConflict("sermon", null, sermonContent,
+                                SQLiteDatabase.CONFLICT_REPLACE);
+                        ++added;
+                    } else {
+                        db.update("sermon", sermonContent, "_id = ?",
+                                new String[] { Long.toString(id) });
+                        ++updated;
+                    }
+                    ContentValues syncContent = new ContentValues(2);
+                    syncContent.put("sermon_id", id);
+                    syncContent.put("hash", newHash);
+                    db.insertWithOnConflict("sync", null, syncContent,
+                            SQLiteDatabase.CONFLICT_REPLACE);
+                }
+                newSermonIds.add(id);
             }
-        });
+            // Delete
+            for (int i = 0; i < syncData.size(); ++i) {
+                long id = syncData.keyAt(i);
+                if (!newSermonIds.contains(id)) {
+                    db.delete("sermon", "_id = ?",
+                            new String[] { Long.toString(id) });
+                    ++removed;
+                }
+            }
+            db.setTransactionSuccessful();
+            return new ListRefresh(added, updated, removed);
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    private static class SermonCursor {
+        private static final String SELECT_FROM =
+                "SELECT sermon._id, sermon.passage, sermon.time," +
+                        " sermon.series, sermon.title, sermon.speaker," +
+                        " " + Db.selectSnippet("passage") + " AS passage_snippet," +
+                        " " + Db.selectSnippet("series") + " AS series_snippet," +
+                        " " + Db.selectSnippet("title") + " AS title_snippet," +
+                        " " + Db.selectSnippet("speaker") + " AS speaker_snippet," +
+                        " (download.local_path IS NOT NULL) AS downloaded," +
+                        " (download.download_id IS NOT NULL) AS downloading" +
+                        " FROM sermon LEFT JOIN download ON sermon._id = download.sermon_id" +
+                        " JOIN sermon_fts ON sermon._id = sermon_fts.docid";
+
+        private final Cursor mCursor;
+        private final int mId,
+                mPassage, mPassageSnippet,
+                mTime,
+                mSeries, mSeriesSnippet,
+                mTitle, mTitleSnippet,
+                mSpeaker, mSpeakerSnippet,
+                mDownloaded, mDownloading;
+
+        private SermonCursor(SQLiteDatabase db, String queryTail, String[] whereArgs) {
+            mCursor = db.rawQuery(SermonCursor.SELECT_FROM + queryTail, whereArgs);
+            mId = mCursor.getColumnIndexOrThrow("_id");
+            mPassage = mCursor.getColumnIndexOrThrow("passage");
+            mPassageSnippet = mCursor.getColumnIndexOrThrow("passage_snippet");
+            mTime = mCursor.getColumnIndexOrThrow("time");
+            mSeries = mCursor.getColumnIndexOrThrow("series");
+            mSeriesSnippet = mCursor.getColumnIndexOrThrow("series_snippet");
+            mTitle = mCursor.getColumnIndexOrThrow("title");
+            mTitleSnippet = mCursor.getColumnIndexOrThrow("title_snippet");
+            mSpeaker = mCursor.getColumnIndexOrThrow("speaker");
+            mSpeakerSnippet = mCursor.getColumnIndexOrThrow("speaker_snippet");
+            mDownloaded = mCursor.getColumnIndexOrThrow("downloaded");
+            mDownloading = mCursor.getColumnIndexOrThrow("downloading");
+        }
+
+        private boolean moveToNext() {
+            return mCursor.moveToNext();
+        }
+
+        private void close() {
+            mCursor.close();
+        }
+
+        private StringWithSnippet getStringWithSnippet(int column, int snippetColumn) {
+            String snippet = mCursor.getString(snippetColumn);
+            return new StringWithSnippet(mCursor.getString(column),
+                    (snippet == null || snippet.isEmpty()) ? null : snippet);
+        }
+
+        private Sermon.DownloadState getDownloadState() {
+            if (mCursor.getInt(mDownloaded) != 0) {
+                return Sermon.DownloadState.DOWNLOADED;
+            }
+            if (mCursor.getInt(mDownloading) != 0) {
+                return Sermon.DownloadState.ATTEMPTED;
+            }
+            return Sermon.DownloadState.NONE;
+        }
+
+        private Sermon get() throws IllegalArgumentException {
+            return new Sermon(
+                    mCursor.getLong(mId),
+                    getStringWithSnippet(mPassage, mPassageSnippet),
+                    ISO_TIME_FORMAT.parseDateTime(mCursor.getString(mTime)),
+                    getStringWithSnippet(mSeries, mSeriesSnippet),
+                    getStringWithSnippet(mTitle, mTitleSnippet),
+                    getStringWithSnippet(mSpeaker, mSpeakerSnippet),
+                    getDownloadState()
+            );
+        }
+    }
+
+    static List<Sermon> doListSermons(SQLiteDatabase db, SermonQuery query) {
+        String whereClause = " WHERE 1";
+        ArrayList<String> whereArgs = new ArrayList<>();
+        if (query.downloaded_only) {
+            whereClause += " AND (download.local_path IS NOT NULL)";
+        }
+        if (!query.search_text.equals("")) {
+            whereClause += " AND (sermon_fts.sermon_fts MATCH ?)";
+            whereArgs.add(query.search_text);
+        }
+        SermonCursor cursor = new SermonCursor(db,
+                whereClause + " ORDER BY time DESC", whereArgs.toArray(new String[0]));
+        try {
+            List<Sermon> results = new ArrayList<>();
+            while (cursor.moveToNext()) {
+                try {
+                    results.add(cursor.get());
+                } catch (IllegalArgumentException e) {
+                    Utility.nonFatal(e);
+                    // skip this Sermon (couldn't parse the date)
+                }
+            }
+            return results;
+        } finally {
+            cursor.close();
+        }
+    }
+
+    static Sermon doGetSermon(SQLiteDatabase db, long id) {
+        SermonCursor cursor = new SermonCursor(db,
+                " WHERE sermon._id=?", new String[] { Long.toString(id) });
+        try {
+            return cursor.moveToNext() ? cursor.get() : null;
+        } catch (IllegalArgumentException e) {
+            Utility.nonFatal(e);
+            return null;
+        } finally {
+            cursor.close();
+        }
+    }
+
+    // Database - downloads
+
+    static void doStartDownload(SQLiteDatabase db, long id, long downloadId) {
+        ContentValues content = new ContentValues(3);
+        content.put("sermon_id", id);
+        content.put("download_id", downloadId);
+        content.putNull("local_path");
+        db.insertWithOnConflict("download", null, content, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    static Sermon doFinishDownload(SQLiteDatabase db, long downloadId, File localPath) {
+        // 1. Get the Sermon ID
+        Cursor cursor = db.rawQuery("SELECT sermon_id FROM download WHERE download_id = ?",
+                new String[] { Long.toString(downloadId) });
+        try {
+            if (!cursor.moveToNext()) {
+                return null;
+            }
+            long id = cursor.getLong(cursor.getColumnIndexOrThrow("sermon_id"));
+            // Update the download table with localPath
+            ContentValues content = new ContentValues(2);
+            content.putNull("download_id");
+            content.put("local_path", localPath.getPath());
+            db.update("download", content, "sermon_id = ?", new String[] { Long.toString(id) });
+            // Return the sermon data
+            return doGetSermon(db, id);
+        } finally {
+            cursor.close();
+        }
+    }
+
+    static Uri doGetAudio(SQLiteDatabase db, long id, boolean forceRemote) {
+        Cursor cursor = db.rawQuery("SELECT sermon.audio AS audio," +
+                " download.local_path AS local_path" +
+                " FROM sermon" +
+                " LEFT JOIN download ON sermon._id = download.sermon_id" +
+                " WHERE sermon._id = ?", new String[] { Long.toString(id) });
+        try {
+            if (!cursor.moveToNext()) {
+                return null;
+            }
+            String localPath = cursor.getString(cursor.getColumnIndexOrThrow("local_path"));
+            if (forceRemote || localPath == null) {
+                return Uri.parse(cursor.getString(cursor.getColumnIndexOrThrow("audio")));
+            } else {
+                return Uri.fromFile(new File(localPath));
+            }
+        } finally {
+            cursor.close();
+        }
+    }
+
+    static File doDeleteDownload(SQLiteDatabase db, long id) {
+        Cursor cursor = db.rawQuery("SELECT local_path FROM download WHERE sermon_id = ?",
+                new String[] { Long.toString(id) });
+        try {
+            if (!cursor.moveToNext()) {
+                return null;
+            }
+            String localPath = cursor.getString(cursor.getColumnIndexOrThrow("local_path"));
+            if (localPath == null) {
+                return null;
+            }
+            db.delete("download", "sermon_id = ?", new String[] { Long.toString(id) });
+            return new File(localPath);
+        } finally {
+            cursor.close();
+        }
+    }
+
+    // Creation
+
+    private Store(Context context) {
+        mContext = context;
+        mDatabaseHelper = new Db(context, "store");
     }
 
     public static final Singleton<Store> SINGLETON = new Singleton<Store>() {

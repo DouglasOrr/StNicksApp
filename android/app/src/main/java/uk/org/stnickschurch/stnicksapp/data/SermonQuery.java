@@ -1,20 +1,21 @@
-package uk.org.stnickschurch.stnicksapp.core;
+package uk.org.stnickschurch.stnicksapp.data;
 
 import android.support.annotation.NonNull;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
+/**
+ * A free text query for sermons.
+ */
 public class SermonQuery {
-    public final String search_text;
+    public final @NonNull String search_text;
     public final boolean downloaded_only;
 
     public SermonQuery(@NonNull String search_text, boolean downloaded_only) {
         this.search_text = search_text;
         this.downloaded_only = downloaded_only;
     }
-
-    // Object equality
 
     @Override
     public int hashCode() {

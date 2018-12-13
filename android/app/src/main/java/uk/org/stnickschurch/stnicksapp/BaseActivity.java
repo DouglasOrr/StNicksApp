@@ -6,7 +6,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.widget.Toast;
 
 import butterknife.ButterKnife;
-import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
@@ -25,12 +24,12 @@ public class BaseActivity extends AppCompatActivity {
 
         // Very basic error/message presentation (toasts are bad!)
         Events events = Events.SINGLETON.get(this);
-        disposeOnDestroy(Observable.merge(events.errors, events.messages)
+        disposeOnDestroy(Events.SINGLETON.get(this).events(Events.Level.INFO)
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<String>() {
+                .subscribe(new Consumer<Events.Event>() {
                     @Override
-                    public void accept(String message) {
-                        Toast.makeText(BaseActivity.this, message, Toast.LENGTH_LONG).show();
+                    public void accept(Events.Event event) {
+                        Toast.makeText(BaseActivity.this, event.message, Toast.LENGTH_LONG).show();
                     }
                 }));
     }
