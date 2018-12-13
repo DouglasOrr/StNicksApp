@@ -72,11 +72,15 @@ public class Store {
         }).subscribeOn(Schedulers.io());
     }
 
-    public Single<Uri> getAudio(long id) {
+    /**
+     * Get the local or remote audio Uri for the sermon.
+     * @param forceRemote if true, don't return a local file Uri, even if the sermon is downloaded
+     */
+    public Single<Uri> getAudio(long id, boolean forceRemote) {
         return Single.create(new SingleOnSubscribe<Uri>() {
             @Override
             public void subscribe(SingleEmitter<Uri> emitter) {
-                Uri uri = doGetAudio(mDatabaseHelper.getReadableDatabase(), id);
+                Uri uri = doGetAudio(mDatabaseHelper.getReadableDatabase(), id, forceRemote);
                 if (uri != null) {
                     emitter.onSuccess(uri);
                 } else {
@@ -104,16 +108,17 @@ public class Store {
                     @Override
                     public void onNext(JSONObject response) {
                         try {
-                            doSync(mDatabaseHelper.getWritableDatabase(), response);
-                            Events.SINGLETON.get(mContext).publishMessage(R.string.message_sermons_refreshed);
+                            ListRefresh stats = doSync(mDatabaseHelper.getWritableDatabase(), response);
+                            Events.SINGLETON.get(mContext).publish(Events.Level.INFO, R.string.message_sermons_refreshed,
+                                    stats.added, stats.updated, stats.removed);
                             tick();
                         } catch (JSONException e) {
-                            Events.SINGLETON.get(mContext).publishError(R.string.error_bad_sermon_list);
+                            Events.SINGLETON.get(mContext).publish(Events.Level.ERROR, R.string.error_bad_sermon_list);
                         }
                     }
                     @Override
                     public void onError(Throwable error) {
-                        Events.SINGLETON.get(mContext).publishError(R.string.error_no_sermon_list);
+                        Events.SINGLETON.get(mContext).publish(Events.Level.ERROR, R.string.error_no_sermon_list);
                     }
                 });
     }
@@ -314,7 +319,8 @@ public class Store {
                         " " + Db.selectSnippet("series") + " AS series_snippet," +
                         " " + Db.selectSnippet("title") + " AS title_snippet," +
                         " " + Db.selectSnippet("speaker") + " AS speaker_snippet," +
-                        " (download.local_path IS NOT NULL) AS downloaded" +
+                        " (download.local_path IS NOT NULL) AS downloaded," +
+                        " (download.download_id IS NOT NULL) AS downloading" +
                         " FROM sermon LEFT JOIN download ON sermon._id = download.sermon_id" +
                         " JOIN sermon_fts ON sermon._id = sermon_fts.docid";
 
@@ -325,7 +331,7 @@ public class Store {
                 mSeries, mSeriesSnippet,
                 mTitle, mTitleSnippet,
                 mSpeaker, mSpeakerSnippet,
-                mDownloaded;
+                mDownloaded, mDownloading;
 
         private SermonCursor(SQLiteDatabase db, String queryTail, String[] whereArgs) {
             mCursor = db.rawQuery(SermonCursor.SELECT_FROM + queryTail, whereArgs);
@@ -340,6 +346,7 @@ public class Store {
             mSpeaker = mCursor.getColumnIndexOrThrow("speaker");
             mSpeakerSnippet = mCursor.getColumnIndexOrThrow("speaker_snippet");
             mDownloaded = mCursor.getColumnIndexOrThrow("downloaded");
+            mDownloading = mCursor.getColumnIndexOrThrow("downloading");
         }
 
         private boolean moveToNext() {
@@ -356,6 +363,16 @@ public class Store {
                     (snippet == null || snippet.isEmpty()) ? null : snippet);
         }
 
+        private Sermon.DownloadState getDownloadState() {
+            if (mCursor.getInt(mDownloaded) != 0) {
+                return Sermon.DownloadState.DOWNLOADED;
+            }
+            if (mCursor.getInt(mDownloading) != 0) {
+                return Sermon.DownloadState.ATTEMPTED;
+            }
+            return Sermon.DownloadState.NONE;
+        }
+
         private Sermon get() throws IllegalArgumentException {
             return new Sermon(
                     mCursor.getLong(mId),
@@ -364,7 +381,7 @@ public class Store {
                     getStringWithSnippet(mSeries, mSeriesSnippet),
                     getStringWithSnippet(mTitle, mTitleSnippet),
                     getStringWithSnippet(mSpeaker, mSpeakerSnippet),
-                    mCursor.getInt(mDownloaded) != 0
+                    getDownloadState()
             );
         }
     }
@@ -441,7 +458,7 @@ public class Store {
         }
     }
 
-    static Uri doGetAudio(SQLiteDatabase db, long id) {
+    static Uri doGetAudio(SQLiteDatabase db, long id, boolean forceRemote) {
         Cursor cursor = db.rawQuery("SELECT sermon.audio AS audio," +
                 " download.local_path AS local_path" +
                 " FROM sermon" +
@@ -452,10 +469,10 @@ public class Store {
                 return null;
             }
             String localPath = cursor.getString(cursor.getColumnIndexOrThrow("local_path"));
-            if (localPath != null) {
-                return Uri.fromFile(new File(localPath));
-            } else {
+            if (forceRemote || localPath == null) {
                 return Uri.parse(cursor.getString(cursor.getColumnIndexOrThrow("audio")));
+            } else {
+                return Uri.fromFile(new File(localPath));
             }
         } finally {
             cursor.close();

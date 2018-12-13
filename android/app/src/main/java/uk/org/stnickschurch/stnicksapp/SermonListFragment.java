@@ -8,6 +8,7 @@ import android.support.v4.app.Fragment;
 import android.support.v7.util.DiffUtil;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -19,7 +20,6 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -28,12 +28,12 @@ import butterknife.OnClick;
 import butterknife.OnTextChanged;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.functions.Consumer;
 import io.reactivex.subjects.BehaviorSubject;
+import uk.org.stnickschurch.stnicksapp.core.Notifications;
+import uk.org.stnickschurch.stnicksapp.core.Store;
 import uk.org.stnickschurch.stnicksapp.core.Utility;
-import uk.org.stnickschurch.stnicksapp.core.old.OldStore;
-import uk.org.stnickschurch.stnicksapp.core.old.Sermon;
-import uk.org.stnickschurch.stnicksapp.core.old.SermonDownload;
+import uk.org.stnickschurch.stnicksapp.data.DataView;
+import uk.org.stnickschurch.stnicksapp.data.Sermon;
 import uk.org.stnickschurch.stnicksapp.data.SermonQuery;
 
 public class SermonListFragment extends Fragment {
@@ -57,10 +57,10 @@ public class SermonListFragment extends Fragment {
 
         public void bindTo(final Sermon sermon) {
             mSermon = sermon;
-            mTitle.setText(sermon.title);
-            mPassage.setText(sermon.passage);
-            mSpeaker.setText(sermon.speaker);
-            mTime.setText(sermon.userDate());
+            mTitle.setText(Html.fromHtml(sermon.title.getSnippetOrText()));
+            mPassage.setText(Html.fromHtml(sermon.passage.getSnippetOrText()));
+            mSpeaker.setText(Html.fromHtml(sermon.speaker.getSnippetOrText()));
+            mTime.setText(DataView.date(sermon));
         }
     }
 
@@ -69,7 +69,7 @@ public class SermonListFragment extends Fragment {
             super(new DiffUtil.ItemCallback<Sermon>() {
                 @Override
                 public boolean areItemsTheSame(Sermon oldItem, Sermon newItem) {
-                    return oldItem.id.equals(newItem.id);
+                    return Objects.equal(oldItem.id, newItem.id);
                 }
                 @Override
                 public boolean areContentsTheSame(Sermon oldItem, Sermon newItem) {
@@ -111,7 +111,7 @@ public class SermonListFragment extends Fragment {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_refresh_sermons:
-                OldStore.SINGLETON.get(getContext()).sync();
+                Store.SINGLETON.get(getContext()).sync();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -129,8 +129,8 @@ public class SermonListFragment extends Fragment {
         mItems.setLayoutManager(new LinearLayoutManager(inflater.getContext()));
         SermonListAdapter adapter = new SermonListAdapter();
         mItems.setAdapter(adapter);
-        mDisposeOnDestroy.add(OldStore.SINGLETON.get(getContext())
-                .findSermons(mQuery)
+        mDisposeOnDestroy.add(Store.SINGLETON.get(getContext())
+                .listSermons(mQuery)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(adapter)
         );
@@ -159,51 +159,39 @@ public class SermonListFragment extends Fragment {
         mQuery.onNext(new SermonQuery(text.toString(), mQuery.getValue().downloaded_only));
     }
 
-    private void executeShowDialog(final Sermon sermon, Optional<SermonDownload> download) {
+    private void showDialog(final Sermon sermon) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle(sermon.userTitle());
-        builder.setMessage(sermon.userDescription("\n"));
+        builder.setTitle(DataView.uiTitle(sermon));
+        builder.setMessage(DataView.longDescription(sermon, "\n"));
 
-        boolean hasRecord = download.isPresent();
-        boolean hasFile = hasRecord && download.get().local_path != null;
         builder.setPositiveButton(R.string.sermon_dialog_play,
                 new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                PlaybackService.Client.SINGLETON.get(getContext())
-                        .start(PlaybackService.ACTION_PLAY, sermon.id, null);
-            }
-        });
-        if (hasFile) {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        PlaybackService.Client.SINGLETON.get(getContext())
+                                .start(PlaybackService.ACTION_PLAY, sermon.id, null);
+                    }
+                });
+        if (sermon.download == Sermon.DownloadState.DOWNLOADED) {
             builder.setNeutralButton(R.string.sermon_dialog_delete,
                     new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialogInterface, int i) {
-                    OldStore.SINGLETON.get(getContext()).delete(sermon);
-                }
-            });
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            Store.SINGLETON.get(getContext()).deleteDownload(sermon.id);
+                        }
+                    });
         } else {
             builder.setNeutralButton(
-                    hasRecord ? R.string.sermon_dialog_retry : R.string.sermon_dialog_download,
+                    sermon.download == Sermon.DownloadState.ATTEMPTED
+                            ? R.string.sermon_dialog_retry
+                            : R.string.sermon_dialog_download,
                     new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialogInterface, int i) {
-                    OldStore.SINGLETON.get(getContext()).download(sermon);
-                }
-            });
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            Notifications.SINGLETON.get(getContext()).download(sermon);
+                        }
+                    });
         }
         builder.show();
-    }
-
-    private void showDialog(final Sermon sermon) {
-        mDisposeOnDestroy.add(OldStore.SINGLETON.get(getContext())
-                .getDownload(sermon)
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<Optional<SermonDownload>>() {
-            @Override
-            public void accept(Optional<SermonDownload> download) {
-                executeShowDialog(sermon, download);
-            }
-        }));
     }
 }

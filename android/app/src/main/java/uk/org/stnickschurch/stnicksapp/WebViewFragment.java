@@ -68,7 +68,7 @@ public abstract class WebViewFragment extends Fragment {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 if (!mFirstLoad) {
-                    Events.SINGLETON.get(getContext()).publishMessage(refreshMessage());
+                    Events.SINGLETON.get(getContext()).publish(Events.Level.INFO, refreshMessage());
                 }
                 mFirstLoad = false;
             }

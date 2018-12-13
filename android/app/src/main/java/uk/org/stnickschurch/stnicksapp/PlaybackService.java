@@ -1,5 +1,6 @@
 package uk.org.stnickschurch.stnicksapp;
 
+import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
@@ -7,6 +8,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -20,19 +22,18 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
+import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 import io.reactivex.subjects.BehaviorSubject;
 import uk.org.stnickschurch.stnicksapp.core.Notifications;
 import uk.org.stnickschurch.stnicksapp.core.Singleton;
+import uk.org.stnickschurch.stnicksapp.core.Store;
 import uk.org.stnickschurch.stnicksapp.core.Utility;
-import uk.org.stnickschurch.stnicksapp.core.old.OldStore;
-import uk.org.stnickschurch.stnicksapp.core.old.Sermon;
 
 public class PlaybackService extends Service {
     /**
@@ -42,9 +43,9 @@ public class PlaybackService extends Service {
         public static final Event STOP = new Event(ACTION_STOP, null);
 
         public final String action;
-        public final @Nullable Sermon sermon;
+        public final @Nullable Long sermon;
 
-        public Event(String action, @Nullable Sermon sermon) {
+        public Event(String action, @Nullable Long sermon) {
             this.action = action;
             this.sermon = sermon;
         }
@@ -115,10 +116,10 @@ public class PlaybackService extends Service {
             mContext = context;
         }
 
-        private Intent intent(String action, @Nullable String sermonId, @Nullable Integer seekToPosition) {
+        private Intent intent(String action, @Nullable Long sermon, @Nullable Integer seekToPosition) {
             Intent intent = new Intent(mContext, PlaybackService.class).setAction(action);
-            if (sermonId != null) {
-                intent.putExtra(EXTRA_SERMON_ID, sermonId);
+            if (sermon != null) {
+                intent.putExtra(EXTRA_SERMON_ID, sermon);
             }
             if (seekToPosition != null) {
                 intent.putExtra(EXTRA_SEEK_TO_POSITION, seekToPosition);
@@ -126,15 +127,15 @@ public class PlaybackService extends Service {
             return intent;
         }
 
-        public PendingIntent pendingIntent(String action, @Nullable String sermonId) {
+        public PendingIntent pendingIntent(String action, @Nullable Long sermon) {
             return PendingIntent.getService(mContext,
-                    Objects.hashCode(action, sermonId),
-                    intent(action, sermonId, null),
+                    Objects.hashCode(action, sermon),
+                    intent(action, sermon, null),
                     0);
         }
 
-        public void start(String action, @Nullable String sermonId, @Nullable Integer seekToPosition) {
-            Intent intent = intent(action, sermonId, seekToPosition);
+        public void start(String action, @Nullable Long sermon, @Nullable Integer seekToPosition) {
+            Intent intent = intent(action, sermon, seekToPosition);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 mContext.startForegroundService(intent);
             } else {
@@ -159,7 +160,8 @@ public class PlaybackService extends Service {
 
     private ExtractorMediaSource.Factory mMediaFactory;
     private ExoPlayer mPlayer;
-    private Timer mTimer;
+//    private Timer mTimer;
+    private Disposable mTimer;
 
     @Override
     public void onCreate() {
@@ -169,27 +171,27 @@ public class PlaybackService extends Service {
         mMediaFactory = new ExtractorMediaSource.Factory(
                 new DefaultDataSourceFactory(this,
                         Util.getUserAgent(this, "stnicksapp")));
-        mTimer = new Timer("player-position");
-        mTimer.scheduleAtFixedRate(new TimerTask() {
-            private Timeline.Window mWindow = new Timeline.Window();
-            @Override
-            public void run() {
-                if (!mPlayer.getCurrentTimeline().isEmpty()) {
-                    mPlayer.getCurrentTimeline().getWindow(mPlayer.getCurrentWindowIndex(), mWindow);
-                    Client.SINGLETON.get(PlaybackService.this)
-                            .progress
-                            .onNext(new Progress((int) mWindow.getDurationMs(),
-                                    (int) mPlayer.getCurrentPosition(),
-                                    (int) mPlayer.getBufferedPosition()));
-                }
-            }
-        }, 0, Utility.getPeriodMs(getString(R.string.seekbar_refresh)));
+        mTimer = Observable.interval(0, Utility.getPeriodMs(getString(R.string.seekbar_refresh)), TimeUnit.MILLISECONDS)
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<Long>() {
+                    private Timeline.Window mWindow = new Timeline.Window();
+                    @Override
+                    public void accept(Long counter) {
+                        if (!mPlayer.getCurrentTimeline().isEmpty()) {
+                            mPlayer.getCurrentTimeline().getWindow(mPlayer.getCurrentWindowIndex(), mWindow);
+                            Client.SINGLETON.get(PlaybackService.this)
+                                    .progress
+                                    .onNext(new Progress((int) mWindow.getDurationMs(),
+                                            (int) mPlayer.getCurrentPosition(),
+                                            (int) mPlayer.getBufferedPosition()));
+                        }
+                    }
+                });
     }
 
     @Override
     public void onDestroy() {
-        mTimer.cancel();
-        mTimer = null;
+        mTimer.dispose();
         super.onDestroy();
     }
 
@@ -204,14 +206,23 @@ public class PlaybackService extends Service {
             stopSelf();
         } else {
             // Only ACTION_STOP is allowed to have a null sermon
-            startForeground(Notifications.notificationId(event.sermon.id),
-                    Notifications.SINGLETON.get(PlaybackService.this)
-                            .getPlayback(event.sermon, ACTION_PLAY.equals(event.action)));
+            Notifications.SINGLETON.get(PlaybackService.this)
+                    .getPlayback(event.sermon, ACTION_PLAY.equals(event.action))
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(new Consumer<Notification>() {
+                        @Override
+                        public void accept(Notification notification) {
+                            startForeground(Notifications.notificationId(event.sermon), notification);
+                        }
+                    });
         }
     }
 
-    private void execute(String action, @Nullable Sermon sermon, int seekToPosition) {
-        final @Nullable Sermon oldSermon = Client.SINGLETON.get(this).events.getValue().sermon;
+    private void execute(String action, @Nullable Long sermon, int seekToPosition) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            throw new IllegalStateException("Cannot execute() except on the main thread");
+        }
+        final @Nullable Long oldSermon = Client.SINGLETON.get(this).events.getValue().sermon;
 
         // Fall back to ACTION_STOP if we're missing sermon info (for any reason)
         if (ACTION_STOP.equals(action) || (sermon == null && oldSermon == null)) {
@@ -220,11 +231,11 @@ public class PlaybackService extends Service {
 
         } else {
             // Either sermon (preferred) or oldSermon (fallback) must be non-null
-            final @NonNull Sermon activeSermon = sermon != null ? sermon : oldSermon;
+            final @NonNull Long activeSermon = sermon != null ? sermon : oldSermon;
             if (ACTION_PLAY.equals(action)) {
                 if (!activeSermon.equals(oldSermon)) {
-                    OldStore.SINGLETON.get(this)
-                            .getLocalOrRemoteAudio(sermon)
+                    Store.SINGLETON.get(this)
+                            .getAudio(sermon, false)
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe(new Consumer<Uri>() {
                                 @Override
@@ -256,16 +267,13 @@ public class PlaybackService extends Service {
     @Override
     public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
         if (intent != null) {
-            final String action = intent.getAction();
-            final int seekToPosition = intent.getIntExtra(EXTRA_SEEK_TO_POSITION, 0);
-            OldStore.SINGLETON.get(this)
-                    .getSermon(intent.getStringExtra(EXTRA_SERMON_ID))
-                    .subscribe(new Consumer<Optional<Sermon>>() {
-                        @Override
-                        public void accept(Optional<Sermon> sermon) {
-                            execute(action, sermon.orNull(), seekToPosition);
-                        }
-                    });
+            final Long sermonId = intent.hasExtra(EXTRA_SERMON_ID) ? intent.getLongExtra(EXTRA_SERMON_ID, -1) : null;
+            AndroidSchedulers.mainThread().scheduleDirect(new Runnable() {
+                @Override
+                public void run() {
+                    execute(intent.getAction(), sermonId, intent.getIntExtra(EXTRA_SEEK_TO_POSITION, 0));
+                }
+            });
         }
         return START_NOT_STICKY;
     }

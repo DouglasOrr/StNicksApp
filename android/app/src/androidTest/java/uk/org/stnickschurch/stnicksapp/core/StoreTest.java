@@ -73,7 +73,7 @@ public class StoreTest {
                                 new StringWithSnippet("Tales Of The Unexpected", null),
                                 new StringWithSnippet("Tales Of The Unexpected 4", null),
                                 new StringWithSnippet("Chris Fishlock", null),
-                                false
+                                Sermon.DownloadState.NONE
                         ),
                         new Sermon(1,
                                 new StringWithSnippet("Luke 15:11-24", null),
@@ -81,7 +81,7 @@ public class StoreTest {
                                 new StringWithSnippet("Tales Of The Unexpected", null),
                                 new StringWithSnippet("Tales Of The Unexpected 3", null),
                                 new StringWithSnippet("Chris Fishlock", null),
-                                false
+                                Sermon.DownloadState.NONE
                         ))));
 
         assertThat(Store.doListSermons(dbHelper.getReadableDatabase(), new SermonQuery("luke 15 of Fishlock \"unexpected 3\"", false)),
@@ -92,7 +92,7 @@ public class StoreTest {
                                 new StringWithSnippet("Tales Of The Unexpected", "Tales <b>Of</b> The Unexpected"),
                                 new StringWithSnippet("Tales Of The Unexpected 3", "Tales <b>Of</b> The <b>Unexpected</b> <b>3</b>"),
                                 new StringWithSnippet("Chris Fishlock", "Chris <b>Fishlock</b>"),
-                                false
+                                Sermon.DownloadState.NONE
                         ))));
     }
 
@@ -134,29 +134,32 @@ public class StoreTest {
         Store.Db dbHelper = new Store.Db(InstrumentationRegistry.getContext(), null);
         Store.doSync(dbHelper.getWritableDatabase(), mSyncResponse);
 
-        assertThat(Store.doGetAudio(dbHelper.getReadableDatabase(), 1),
+        assertThat(Store.doGetAudio(dbHelper.getReadableDatabase(), 1, false),
                 equalTo(Uri.parse("https://stnickschurch.s3.amazonaws.com/an%20other.mp4")));
 
         // startDownload
         Store.doStartDownload(dbHelper.getWritableDatabase(), 1, 123);
 
-        assertThat(Store.doGetAudio(dbHelper.getReadableDatabase(), 1),
+        assertThat(Store.doGetAudio(dbHelper.getReadableDatabase(), 1, false),
                 equalTo(Uri.parse("https://stnickschurch.s3.amazonaws.com/an%20other.mp4")));
 
         // finishDownload
         Sermon sermon = Store.doFinishDownload(dbHelper.getWritableDatabase(), 123,
                 new File("foobar/Tales Of 3.mp4"));
         assertThat(sermon.title.toString(), equalTo("Tales Of The Unexpected 3"));
+        assertThat(sermon.download, equalTo(Sermon.DownloadState.DOWNLOADED));
 
-        assertThat(Store.doGetAudio(dbHelper.getReadableDatabase(), 1),
+        assertThat(Store.doGetAudio(dbHelper.getReadableDatabase(), 1, false),
                 equalTo(Uri.fromFile(new File("foobar/Tales Of 3.mp4"))));
+        assertThat(Store.doGetAudio(dbHelper.getReadableDatabase(), 1, true),
+                equalTo(Uri.parse("https://stnickschurch.s3.amazonaws.com/an%20other.mp4")));
 
         // can't finishDownload twice
         assertThat(Store.doFinishDownload(dbHelper.getWritableDatabase(), 123,
                 new File("different/Tales Of 3.mp4")),
                 nullValue());
 
-        assertThat(Store.doGetAudio(dbHelper.getReadableDatabase(), 1),
+        assertThat(Store.doGetAudio(dbHelper.getReadableDatabase(), 1, false),
                 equalTo(Uri.fromFile(new File("foobar/Tales Of 3.mp4"))));
 
         // deleteDownload

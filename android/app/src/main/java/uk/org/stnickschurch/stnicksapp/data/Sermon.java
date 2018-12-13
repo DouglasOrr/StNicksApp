@@ -23,7 +23,8 @@ public class Sermon {
 
     public final @NonNull StringWithSnippet speaker;
 
-    public final boolean downloaded;
+    public enum DownloadState { NONE, ATTEMPTED, DOWNLOADED }
+    public final DownloadState download;
 
     public Sermon(long id,
                   @NonNull StringWithSnippet passage,
@@ -31,19 +32,19 @@ public class Sermon {
                   @NonNull StringWithSnippet series,
                   @NonNull StringWithSnippet title,
                   @NonNull StringWithSnippet speaker,
-                  boolean downloaded) {
+                  DownloadState download) {
         this.id = id;
         this.passage = passage;
         this.time = time;
         this.series = series;
         this.title = title;
         this.speaker = speaker;
-        this.downloaded = downloaded;
+        this.download = download;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id, passage, time, series, title, speaker, downloaded);
+        return Objects.hashCode(id, passage, time, series, title, speaker, download);
     }
 
     @Override
@@ -58,7 +59,7 @@ public class Sermon {
                 && Objects.equal(this.series, that.series)
                 && Objects.equal(this.title, that.title)
                 && Objects.equal(this.speaker, that.speaker)
-                && this.downloaded == that.downloaded;
+                && this.download == that.download;
     }
 
     @Override
@@ -70,7 +71,7 @@ public class Sermon {
                 .add("series", series)
                 .add("title", title)
                 .add("speaker", speaker)
-                .add("downloaded", downloaded)
+                .add("download", download)
                 .toString();
     }
 }

@@ -2,16 +2,34 @@ package uk.org.stnickschurch.stnicksapp.core;
 
 import android.content.Context;
 
+import io.reactivex.Observable;
+import io.reactivex.functions.Predicate;
 import io.reactivex.subjects.PublishSubject;
 
 public class Events {
-    public final PublishSubject<String> errors = PublishSubject.create();
-    public void publishError(int id) {
-        errors.onNext(mContext.getString(id));
+    public enum Level { DEBUG, INFO, ERROR }
+    public static class Event {
+        public final Level level;
+        public final String message;
+        public Event(Level level, String message) {
+            this.level = level;
+            this.message = message;
+        }
     }
-    public final PublishSubject<String> messages = PublishSubject.create();
-    public void publishMessage(int id) {
-        messages.onNext(mContext.getString(id));
+
+    private final PublishSubject<Event> mEvents = PublishSubject.create();
+
+    public void publish(Level level, int messageId, Object... args) {
+        mEvents.onNext(new Event(level, mContext.getString(messageId, args)));
+    }
+
+    public Observable<Event> events(Level minLevel) {
+        return mEvents.filter(new Predicate<Event>() {
+            @Override
+            public boolean test(Event event) {
+                return minLevel.ordinal() <= event.level.ordinal();
+            }
+        });
     }
 
     private final Context mContext;
