@@ -61,7 +61,7 @@ public class Notifications {
     public static int notificationId(long sermon) {
         // Guard against zero ID (which cannot be used as a notification ID)
         if (sermon <= 0) {
-            return Integer.MAX_VALUE - (int) sermon;
+            return Integer.MAX_VALUE + (int) sermon;
         } else {
             return (int) sermon;
         }

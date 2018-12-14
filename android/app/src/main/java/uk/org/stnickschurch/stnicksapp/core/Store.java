@@ -397,7 +397,8 @@ public class Store {
             whereArgs.add(query.search_text);
         }
         SermonCursor cursor = new SermonCursor(db,
-                whereClause + " ORDER BY time DESC", whereArgs.toArray(new String[0]));
+                whereClause + " ORDER BY time DESC LIMIT 200",
+                whereArgs.toArray(new String[0]));
         try {
             List<Sermon> results = new ArrayList<>();
             while (cursor.moveToNext()) {
