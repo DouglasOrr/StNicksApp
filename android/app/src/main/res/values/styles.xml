@@ -19,11 +19,6 @@
         <item name="colorAccent">@color/colorPrimary</item>
     </style>
 
-    <style name="IconButton">
-        <item name="android:background">#00000000</item>
-        <item name="android:tint">#ffffffff</item>
-        <item name="android:padding">10dp</item>
-    </style>
     <style name="PrimaryText" parent="TextAppearance.AppCompat.Medium">
         <item name="android:textColor">#ff606060</item>
     </style>

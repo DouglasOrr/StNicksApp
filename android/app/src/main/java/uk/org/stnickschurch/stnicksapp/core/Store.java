@@ -309,8 +309,7 @@ public class Store {
             for (int i = 0; i < syncData.size(); ++i) {
                 long id = syncData.keyAt(i);
                 if (!newSermonIds.contains(id)) {
-                    db.delete("sermon", "_id = ?",
-                            new String[] { Long.toString(id) });
+                    db.delete("sermon", "_id = ?", new String[] { Long.toString(id) });
                     ++removed;
                 }
             }
