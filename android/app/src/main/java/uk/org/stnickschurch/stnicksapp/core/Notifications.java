@@ -175,12 +175,17 @@ public class Notifications {
                 });
     }
     private Notification doGetPlayback(Sermon sermon, boolean isPlaying) {
+        String title = DataView.uiTitle(sermon);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(mContext, playbackChannel())
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(DataView.uiTitle(sermon))
-                .setContentText(DataView.shortDescription(sermon))
+                .setContentTitle(title)
                 .setStyle(new android.support.v4.media.app.NotificationCompat.MediaStyle()
                         .setShowActionsInCompactView(0, 1));
+
+        String contentText = sermon.title.getSnippetOrText();
+        if (!title.equals(contentText)) {
+            builder.setContentText(contentText);
+        }
 
         // Add various click actions
         builder.setContentIntent(PendingIntent.getActivity(mContext, 0,

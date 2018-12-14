@@ -8,6 +8,7 @@ import android.widget.SeekBar;
 
 import com.google.common.collect.ImmutableMap;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
@@ -129,14 +130,20 @@ public class PlayerActivity extends BaseActivity {
                         Utility.getPeriodMs(getString(R.string.passage_refresh)))
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Consumer<JSONObject>() {
-                    @Override
-                    public void accept(JSONObject response) throws Exception {
-                        String passageHtml = response.getJSONArray("passages").getString(0);
-                        mBibleView.loadDataWithBaseURL("file:///android_asset/",
-                                getString(R.string.bible_html_header) + passageHtml,
-                                "text/html", "UTF-8", null);
-                    }
-                }));
+                            @Override
+                            public void accept(JSONObject response) throws JSONException {
+                                String passageHtml = response.getJSONArray("passages").getString(0);
+                                mBibleView.loadDataWithBaseURL("file:///android_asset/",
+                                        getString(R.string.bible_html_header) + passageHtml,
+                                        "text/html", "UTF-8", null);
+                            }
+                        },
+                        new Consumer<Throwable>() {
+                            @Override
+                            public void accept(Throwable throwable) {
+                                mBibleView.loadUrl("about:blank");
+                            }
+                        }));
     }
 
     @Override

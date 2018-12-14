@@ -25,7 +25,6 @@ import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.Scheduler;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
-import io.reactivex.subjects.BehaviorSubject;
 
 /**
  * Issue REST & other HTTP requests.
@@ -65,10 +64,9 @@ public class Downloader {
     }
 
     public Observable<JSONObject> cachedGetRequest(final String url, final Map<String, String> headers, final long refreshMs) {
-        final BehaviorSubject<JSONObject> result = BehaviorSubject.create();
-        mDownloader.scheduleDirect(new Runnable() {
+        return Observable.create(new ObservableOnSubscribe<JSONObject>() {
             @Override
-            public void run() {
+            public void subscribe(ObservableEmitter<JSONObject> emitter) {
                 final File local = new File(mDownloadCache, Utility.md5(url) + ".json");
                 boolean requiresRefresh = true;
 
@@ -77,7 +75,7 @@ public class Downloader {
                     requiresRefresh = local.lastModified() + refreshMs < System.currentTimeMillis();
                     try {
                         String json = new String(Files.asByteSource(local).read(), Charset.forName("UTF-8"));
-                        result.onNext(new JSONObject(json));
+                        emitter.onNext(new JSONObject(json));
                     } catch (IOException e) {
                         Utility.log("Cache error %s", e.getMessage());
                         requiresRefresh = true;
@@ -92,16 +90,24 @@ public class Downloader {
                     getRequest(url, headers)
                             .subscribeOn(mDownloader)
                             .subscribe(new Consumer<JSONObject>() {
-                                @Override
-                                public void accept(JSONObject response) throws Exception {
-                                    Files.write(response.toString().getBytes(Charset.forName("UTF-8")), local);
-                                    result.onNext(response);
-                                }
-                            });
+                                        @Override
+                                        public void accept(JSONObject response) throws Exception {
+                                            Files.write(response.toString().getBytes(Charset.forName("UTF-8")), local);
+                                            emitter.onNext(response);
+                                            emitter.onComplete();
+                                        }
+                                    },
+                                    new Consumer<Throwable>() {
+                                        @Override
+                                        public void accept(Throwable throwable) {
+                                            emitter.onError(throwable);
+                                        }
+                                    });
+                } else {
+                    emitter.onComplete();
                 }
             }
-        });
-        return result;
+        }).subscribeOn(mDownloader);
     }
 
     private Downloader(Context context) {

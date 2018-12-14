@@ -13,14 +13,19 @@ public class DataView {
      * The title to use for popups and notifications.
      */
     public static String uiTitle(Sermon sermon) {
-        return sermon.passage.getSnippetOrText();
+        String title = sermon.passage.getSnippetOrText();
+        if (title.length() == 0) {
+            title = sermon.title.getSnippetOrText();
+            if (title.length() == 0) {
+                title = sermon.series.getSnippetOrText();
+                if (title.length() == 0) {
+                    title = sermon.speaker.getSnippetOrText();
+                }
+            }
+        }
+        return title;
     }
-    /**
-     * Medium-verbose information for popups and notifications.
-     */
-    public static String shortDescription(Sermon sermon) {
-        return sermon.title.getSnippetOrText();
-    }
+
     /**
      * Verbose description, for notifications & popups.
      */
