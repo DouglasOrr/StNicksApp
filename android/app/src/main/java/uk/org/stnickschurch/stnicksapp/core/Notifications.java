@@ -132,25 +132,36 @@ public class Notifications {
             Utility.log("Error! couldn't find downloaded file");
             return;
         }
-        String localUri = cursor.getString(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI));
-        File localPath = new File(Uri.parse(localUri).getPath());
-        Store.SINGLETON.get(mContext)
-                .finishDownload(downloadId, localPath)
-                .subscribe(new SingleObserver<Sermon>() {
-                    @Override
-                    public void onSubscribe(Disposable d) { }
-                    @Override
-                    public void onSuccess(Sermon sermon) {
-                        notifyDownloadComplete(sermon);
-                    }
-                    @Override
-                    public void onError(Throwable e) {
-                        // Something else has happened, and the download doesn't match
-                        // - we don't need the "orphaned" file anymore
-                        Utility.log("Warning! couldn't find sermon for downloaded file %s", localPath);
-                        localPath.delete();
-                    }
-                });
+        int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+        if (DownloadManager.STATUS_SUCCESSFUL == status) {
+            String localUri = cursor.getString(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI));
+            File localPath = new File(Uri.parse(localUri).getPath());
+            Store.SINGLETON.get(mContext)
+                    .finishDownload(downloadId, localPath)
+                    .subscribe(new SingleObserver<Sermon>() {
+                        @Override
+                        public void onSubscribe(Disposable d) { }
+
+                        @Override
+                        public void onSuccess(Sermon sermon) {
+                            notifyDownloadComplete(sermon);
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+                            // Something else has happened, and the download doesn't match
+                            // - we don't need the "orphaned" file anymore
+                            Utility.log("Warning! couldn't find sermon for downloaded file %s", localPath);
+                            localPath.delete();
+                        }
+                    });
+        } else {
+            Store.SINGLETON.get(mContext).cancelDownload(downloadId); // Try to clean up
+            if (status != DownloadManager.STATUS_FAILED) {
+                Utility.nonFatal(new IllegalStateException("Unexpected ACTION_DOWNLOAD_COMPLETE with status: " + status));
+            }
+            Events.SINGLETON.get(mContext).publish(Events.Level.ERROR, R.string.error_failed_download);
+        }
     }
     private void notifyDownloadComplete(Sermon sermon) {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(mContext, downloadChannel())

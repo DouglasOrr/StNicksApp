@@ -147,6 +147,16 @@ public class Store {
         }).subscribeOn(Schedulers.io());
     }
 
+    public void cancelDownload(long downloadId) {
+        Schedulers.io().scheduleDirect(new Runnable() {
+            @Override
+            public void run() {
+                doCancelDownload(mDatabaseHelper.getWritableDatabase(), downloadId);
+                tick();
+            }
+        });
+    }
+
     public void deleteDownload(long id) {
         Schedulers.io().scheduleDirect(new Runnable() {
             @Override
@@ -495,6 +505,10 @@ public class Store {
         } finally {
             cursor.close();
         }
+    }
+
+    static void doCancelDownload(SQLiteDatabase db, long downloadId) {
+        db.delete("download", "download_id = ?", new String[] { Long.toString(downloadId) });
     }
 
     static File doDeleteDownload(SQLiteDatabase db, long id) {

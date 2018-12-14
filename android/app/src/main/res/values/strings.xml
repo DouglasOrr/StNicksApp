@@ -16,7 +16,7 @@
     <string name="menu_stop_title">Stop</string>
 
     <!-- Sermon list -->
-    <string name="filter_hint">passage or title</string>
+    <string name="filter_hint">passage, title or speaker</string>
     <string name="filter_downloaded_label">Downloaded</string>
     <string name="sermon_snippet_speaker">By: %s</string>
 
@@ -36,6 +36,7 @@
     <string name="error_bad_sermon_list">Couldn\'t fetch sermons - bad data from server</string>
     <string name="error_no_sermon_list">Couldn\'t fetch sermons - no connection</string>
     <string name="error_download_not_found">Couldn\'t find downloaded sermon</string>
+    <string name="error_failed_download">Couldn\'t download sermon</string>
     <string name="message_sermons_refreshed">Sermons list refreshed (+%d/%d/-%d)</string>
     <string name="message_prayers_refreshed">Prayers refreshed</string>
     <string name="message_calendar_refreshed">Calendar refreshed</string>
