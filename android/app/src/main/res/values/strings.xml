@@ -9,8 +9,9 @@
     <string name="section_prayer">Prayer</string>
 
     <!-- Menus -->
-    <string name="menu_settings_title">Settings</string>
     <string name="menu_refresh_title">Refresh</string>
+    <string name="menu_calendar_title">Calendar</string>
+    <string name="menu_settings_title">Settings</string>
     <string name="menu_play_title">Play</string>
     <string name="menu_pause_title">Pause</string>
     <string name="menu_stop_title">Stop</string>
@@ -31,6 +32,8 @@
     <string name="sync_enabled_title">Sermon list background sync</string>
     <string name="notification_channel_playback_name">Playback</string>
     <string name="notification_channel_download_name">Download</string>
+    <string name="pray_title">Pray for St Nick\'s</string>
+    <string name="pray_summary">Subscribe to the St Nick\'s prayer feed with PrayerMate</string>
 
     <!-- Events -->
     <string name="error_bad_sermon_list">Couldn\'t fetch sermons - bad data from server</string>
@@ -42,10 +45,9 @@
     <string name="message_calendar_refreshed">Calendar refreshed</string>
 
     <!-- Behaviour -->
-    <string name="old_sermon_list">https://stnicksapp.blob.core.windows.net/sermons/test.json</string>
     <string name="sermon_list">https://stnicksapp.blob.core.windows.net/sermons/test_v1.json.gz</string>
-    <string name="prayers">https://docs.google.com/document/d/e/2PACX-1vTa3NEUDj7xqBqV7zjrMZQn0XuHAsK24sOJyoK9ruBLxXd-foxpNFcNmFJcRv3zyh-75YYugmrG2J4G/pub?embedded=true</string>
-    <string name="calendar">https://calendar.google.com/calendar/embed?src=c4q58viob1m2dh9rb1mkcr2e7k%40group.calendar.google.com&amp;mode=AGENDA&amp;showTitle=0&amp;showPrint=0&amp;showTabs=0&amp;showDate=0&amp;showNav=0&amp;showTz=0&amp;showCalendars=0&amp;ctz=Europe%2FLondon</string>
+    <string name="calendar_link">https://calendar.google.com/calendar/embed?mode=AGENDA&amp;wkst=1&amp;src=snca.co.uk_clg8mbl9238h3v09saktv2fufg%40group.calendar.google.com</string>
+    <string name="pray_link">http://praynow4.org/stnicks</string>
     <string name="bible_html_header"><![CDATA[
         <link rel=\"stylesheet\" type=\"text/css\" href=\"bible.css\" />
     ]]></string>

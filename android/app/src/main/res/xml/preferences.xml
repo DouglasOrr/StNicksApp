@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <Preference
+        android:title="@string/pray_title"
+        android:summary="@string/pray_summary">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="@string/pray_link"/>
+    </Preference>
     <SwitchPreference
         android:key="sync_enabled"
         android:defaultValue="true"

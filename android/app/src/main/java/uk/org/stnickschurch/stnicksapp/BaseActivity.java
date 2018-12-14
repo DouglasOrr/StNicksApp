@@ -23,8 +23,8 @@ public class BaseActivity extends AppCompatActivity {
         mDisposeOnDestroy = new CompositeDisposable();
 
         // Very basic error/message presentation (toasts are bad!)
-        Events events = Events.SINGLETON.get(this);
-        disposeOnDestroy(Events.SINGLETON.get(this).events(Events.Level.INFO)
+        disposeOnDestroy(Events.SINGLETON.get(this)
+                .events(Events.Level.INFO)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Consumer<Events.Event>() {
                     @Override
