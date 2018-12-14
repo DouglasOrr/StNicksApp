@@ -1,0 +1,5 @@
+*.tsv
+*.gz
+*.json
+local/
+.ipynb_checkpoints/

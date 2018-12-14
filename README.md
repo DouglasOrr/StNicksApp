@@ -49,7 +49,10 @@ Creating a storage account suitable for uploading sermon metadata, using an Azur
 
 ### Uploading sermon metadata
 
-Install [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest), and run (with `CONNECTION_STRING` from Access Keys in the Azure console):
+Install [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest), and run (with a connection string from Access Keys in the Azure console):
 
-    cat test_v1.json | jq -c . | gzip -c > test_v1.json.gz
-    az storage blob upload -c sermons -n test_v1.json.gz -f test_v1.json.gz --content-encoding gzip --connection-string CONNECTION_STRING
+    cd uploader
+    export AZURE_STORAGE_CONNECTION_STRING="..."
+    az storage blob download -c sermons -n test_v1.json.gz -f sermons.old.json && gzip -f sermons.old.json
+    python3 prepare.py sermons.tsv sermons.old.json.gz sermons.json.gz
+    az storage blob upload -c sermons -n test_v1.json.gz -f sermons.json.gz --content-encoding gzip
