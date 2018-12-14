@@ -94,6 +94,26 @@ public class StoreTest {
                                 new StringWithSnippet("Chris Fishlock", "Chris <b>Fishlock</b>"),
                                 Sermon.DownloadState.NONE
                         ))));
+
+        assertThat("prefix query",
+                Store.doListSermons(dbHelper.getReadableDatabase(), new SermonQuery("fish", false)),
+                hasSize(2));
+
+        assertThat("non-prefix query",
+                Store.doListSermons(dbHelper.getReadableDatabase(), new SermonQuery("fish ", false)),
+                hasSize(0));
+
+        assertThat("unbalanced \"",
+                Store.doListSermons(dbHelper.getReadableDatabase(), new SermonQuery("\"the un", false)),
+                hasSize(2));
+
+        assertThat("disallowed syntax NEAR",
+                Store.doListSermons(dbHelper.getReadableDatabase(), new SermonQuery("NEAR ", false)),
+                hasSize(0));
+
+        assertThat("passage phrase search",
+                Store.doListSermons(dbHelper.getReadableDatabase(), new SermonQuery("\"luke 15:11-24\"", false)),
+                hasSize(1));
     }
 
     @Test

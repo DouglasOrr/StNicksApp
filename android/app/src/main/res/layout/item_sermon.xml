@@ -4,7 +4,6 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="@dimen/pad_list"
-    android:textAppearance="@style/TextAppearance.AppCompat.Small"
     android:id="@+id/item_sermon">
 
     <TextView
@@ -12,17 +11,20 @@
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_alignParentStart="true"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:textAppearance="@style/PrimaryText"
         android:id="@+id/text_sermon_passage"
         tools:text="Luke 15:25-32">
     </TextView>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/text_sermon_passage"
         android:layout_alignParentStart="true"
         android:layout_marginTop="@dimen/pad_list_cell"
+        android:layout_marginStart="@dimen/pad_list_indent"
         android:id="@+id/text_sermon_time"
+        android:textAppearance="@style/SecondaryText"
         tools:text="Sun 11 March 2018">
     </TextView>
 
@@ -32,16 +34,9 @@
         android:layout_alignParentEnd="true"
         android:layout_alignParentTop="true"
         android:layout_marginBottom="@dimen/pad_list_cell"
-        android:id="@+id/text_sermon_title"
+        android:id="@+id/text_sermon_snippet"
+        android:textAppearance="@style/SecondaryText"
         tools:text="Tales Of The Unexpected 4">
-    </TextView>
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentBottom="true"
-        android:id="@+id/text_sermon_speaker"
-        tools:text="Chris Fishlock">
     </TextView>
 
 </RelativeLayout>

@@ -40,10 +40,9 @@ public class SermonListFragment extends Fragment {
     public class SermonViewHolder extends RecyclerView.ViewHolder {
         Sermon mSermon;
         @BindView(R.id.item_sermon) View mRoot;
-        @BindView(R.id.text_sermon_title) TextView mTitle;
         @BindView(R.id.text_sermon_passage) TextView mPassage;
-        @BindView(R.id.text_sermon_speaker) TextView mSpeaker;
         @BindView(R.id.text_sermon_time) TextView mTime;
+        @BindView(R.id.text_sermon_snippet) TextView mSnippet;
 
         public SermonViewHolder(View root) {
             super(root);
@@ -57,10 +56,15 @@ public class SermonListFragment extends Fragment {
 
         public void bindTo(final Sermon sermon) {
             mSermon = sermon;
-            mTitle.setText(Html.fromHtml(sermon.title.getSnippetOrText()));
             mPassage.setText(Html.fromHtml(sermon.passage.getSnippetOrText()));
-            mSpeaker.setText(Html.fromHtml(sermon.speaker.getSnippetOrText()));
             mTime.setText(DataView.date(sermon));
+            if (sermon.title.hasSnippet()) {
+                mSnippet.setText(Html.fromHtml(sermon.title.snippet));
+            } else if (sermon.speaker.hasSnippet()) {
+                mSnippet.setText(Html.fromHtml(getString(R.string.sermon_snippet_speaker, sermon.speaker.snippet)));
+            } else {
+                mSnippet.setText("");
+            }
         }
     }
 
@@ -160,11 +164,11 @@ public class SermonListFragment extends Fragment {
     }
 
     private void showDialog(final Sermon sermon) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle(DataView.uiTitle(sermon));
-        builder.setMessage(DataView.longDescription(sermon, "\n"));
-
-        builder.setPositiveButton(R.string.sermon_dialog_play,
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext(), R.style.AppTheme_AlertDialogStyle)
+            .setTitle(DataView.uiTitle(sermon))
+            .setMessage(DataView.longDescription(sermon, "\n"))
+            .setIcon(R.drawable.ic_popup)
+            .setPositiveButton(R.string.sermon_dialog_play,
                 new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {

@@ -18,6 +18,7 @@
     <!-- Sermon list -->
     <string name="filter_hint">passage or title</string>
     <string name="filter_downloaded_label">Downloaded</string>
+    <string name="sermon_snippet_speaker">By: %s</string>
 
     <!-- Sermon dialog -->
     <string name="sermon_dialog_play">Play</string>

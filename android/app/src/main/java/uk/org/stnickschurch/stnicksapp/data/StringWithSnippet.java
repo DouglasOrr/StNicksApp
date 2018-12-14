@@ -21,6 +21,10 @@ public class StringWithSnippet {
         return snippet != null ? snippet : text;
     }
 
+    public boolean hasSnippet() {
+        return snippet != null;
+    }
+
     @Override
     public int hashCode() {
         return Objects.hashCode(text, snippet);

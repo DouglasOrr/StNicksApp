@@ -3,6 +3,7 @@
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <item name="alertDialogTheme">@style/AppTheme.AlertDialogStyle</item>
         <!-- https://stackoverflow.com/questions/34979957/android-status-bar-is-white -->
         <item name="android:windowBackground">@color/colorPrimaryDark</item>
     </style>
@@ -13,10 +14,20 @@
     </style>
     <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+    <style name="AppTheme.AlertDialogStyle" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <!-- Default is the root accent color, which is far too light for text -->
+        <item name="colorAccent">@color/colorPrimary</item>
+    </style>
 
     <style name="IconButton">
         <item name="android:background">#00000000</item>
         <item name="android:tint">#ffffffff</item>
         <item name="android:padding">10dp</item>
+    </style>
+    <style name="PrimaryText" parent="TextAppearance.AppCompat.Medium">
+        <item name="android:textColor">#ff606060</item>
+    </style>
+    <style name="SecondaryText" parent="TextAppearance.AppCompat.Small">
+        <item name="android:textColor">#ffa0a0a0</item>
     </style>
 </resources>

@@ -358,9 +358,10 @@ public class Store {
         }
 
         private StringWithSnippet getStringWithSnippet(int column, int snippetColumn) {
+            String text = mCursor.getString(column);
             String snippet = mCursor.getString(snippetColumn);
-            return new StringWithSnippet(mCursor.getString(column),
-                    (snippet == null || snippet.isEmpty()) ? null : snippet);
+            boolean hasSnippet = !(snippet == null || snippet.isEmpty() || snippet.equals(text));
+            return new StringWithSnippet(text, hasSnippet ? snippet : null);
         }
 
         private Sermon.DownloadState getDownloadState() {
@@ -386,18 +387,34 @@ public class Store {
         }
     }
 
+    private static String sanitizeQuery(String query) {
+        // Replace all ":" and "-" with space - this is OK for sermon range searches in quotes
+        query = query.replaceAll("[:\\-]", " ");
+        // Downcase any "NEAR" - disallowed syntax
+        query = query.replaceAll("NEAR", "near");
+        // Prefix search
+        if (Character.isLetter(query.charAt(query.length() - 1))) {
+            query = query + "*";
+        }
+        // Unbalanced " would crash - so balance them automatically
+        if ((query.length() - query.replaceAll("\"", "").length()) % 2 != 0) {
+            query = query + "\""; // Bad query - unbalanced "
+        }
+        return query;
+    }
+
     static List<Sermon> doListSermons(SQLiteDatabase db, SermonQuery query) {
         String whereClause = " WHERE 1";
         ArrayList<String> whereArgs = new ArrayList<>();
         if (query.downloaded_only) {
             whereClause += " AND (download.local_path IS NOT NULL)";
         }
-        if (!query.search_text.equals("")) {
+        if (!query.search_text.trim().equals("")) {
             whereClause += " AND (sermon_fts.sermon_fts MATCH ?)";
-            whereArgs.add(query.search_text);
+            whereArgs.add(sanitizeQuery(query.search_text));
         }
         SermonCursor cursor = new SermonCursor(db,
-                whereClause + " ORDER BY time DESC LIMIT 200",
+                whereClause + " ORDER BY time DESC LIMIT 100",
                 whereArgs.toArray(new String[0]));
         try {
             List<Sermon> results = new ArrayList<>();
