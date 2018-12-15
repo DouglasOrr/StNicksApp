@@ -11,6 +11,7 @@
     <string name="menu_stop_title">Stop</string>
 
     <!-- Sermon list -->
+    <string name="title_home">St Nick\'s</string>
     <string name="filter_hint">passage, title or speaker</string>
     <string name="filter_downloaded_label">Downloaded</string>
     <string name="sermon_snippet_speaker">By: %s</string>
