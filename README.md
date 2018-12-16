@@ -53,6 +53,6 @@ Install [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
 
     cd uploader
     export AZURE_STORAGE_CONNECTION_STRING="..."
-    az storage blob download -c sermons -n test_v1.json.gz -f sermons.old.json && gzip -f sermons.old.json
+    az storage blob download -c sermons -n v1/sermons -f sermons.old.json && gzip -f sermons.old.json
     python3 prepare.py sermons.tsv sermons.old.json.gz sermons.json.gz
-    az storage blob upload -c sermons -n test_v1.json.gz -f sermons.json.gz --content-encoding gzip
+    az storage blob upload -c sermons -n v1/sermons -f sermons.json.gz --content-encoding gzip
