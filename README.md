@@ -12,6 +12,7 @@ An app for church members at [St Nick's Church, London](https://www.stnickschurc
 
 In God's providence, this is our prayer for the work of St Nick's & by making it easier to access the teaching, we aim for the app to support this.
 
+
 ## Contributing
 
 We use the following process:
@@ -20,7 +21,45 @@ We use the following process:
  - **contributing** - fork & pull request
  - **license** - contributed code should be released under the MIT license
 
-## Architecture
+
+## Updating
+
+### Update sermon metadata
+
+    cd uploader
+    export AZURE_STORAGE_CONNECTION_STRING="..."
+    az storage blob download -c sermons -n v1/sermons -f sermons.old.json && gzip -f sermons.old.json
+    python3 prepare.py sermons.tsv sermons.old.json.gz sermons.json.gz
+    az storage blob upload -c sermons -n "v1/archive/sermons-$(date --iso-8601)" -f sermons.json.gz --content-encoding gzip
+    az storage blob upload -c sermons -n v1/sermons -f sermons.json.gz --content-encoding gzip
+
+### Update APK
+
+ - Prepare
+   - Update `versionCode` and `versionName` in build.gradle
+   - Run `AndroidTests` & `JUnitTests`
+   - Commit & push
+   - _Android Studio > Build > Generate signed bundle / APK > Android App Bundle_
+   - `ls -lh android/app/release/release/app.aab`
+ - Release
+   - `export SNCVERSION=$(date --iso-8601) && echo $SNCVERSION` - this is the version name
+   - `git push origin HEAD:refs/tags/$SNCVERSION`
+   - _Play Console > App releases > Production/Manage > Create Release_
+     - Upload app
+     - Check version code
+     - Write release notes
+     - _Save > Review > Start roll-out to production_
+
+
+## Dependencies
+
+ - [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
+ - [Android Studio](https://developer.android.com/studio)
+
+
+## Notes
+
+### Architecture
 
 The current architecture (not ideal) is as follows:
 
@@ -31,9 +70,7 @@ The current architecture (not ideal) is as follows:
 
 This has the advantage of not requiring a separate web server for the sermon metadata (without which the app would break), although it is less flexible as it limits the sermon metadata to be a single static object.
 
-## Server
-
-### Azure Storage Account
+### Create an Azure Storage Account
 
 Creating a storage account suitable for uploading sermon metadata, using an Azure Storage Account for Blob storage:
 
@@ -46,13 +83,3 @@ Creating a storage account suitable for uploading sermon metadata, using an Azur
  - Secure transfer required: `Disabled`
  - Resource group `stnicksapp`
  - Location: `West Europe`
-
-### Uploading sermon metadata
-
-Install [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest), and run (with a connection string from Access Keys in the Azure console):
-
-    cd uploader
-    export AZURE_STORAGE_CONNECTION_STRING="..."
-    az storage blob download -c sermons -n v1/sermons -f sermons.old.json && gzip -f sermons.old.json
-    python3 prepare.py sermons.tsv sermons.old.json.gz sermons.json.gz
-    az storage blob upload -c sermons -n v1/sermons -f sermons.json.gz --content-encoding gzip
