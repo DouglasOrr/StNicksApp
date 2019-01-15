@@ -2,8 +2,14 @@ package uk.org.stnickschurch.stnicksapp.data;
 
 import com.google.common.base.Joiner;
 
+import org.joda.time.Period;
+import org.joda.time.PeriodType;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.PeriodFormatter;
+import org.joda.time.format.PeriodFormatterBuilder;
+
+import uk.org.stnickschurch.stnicksapp.PlaybackService;
 
 /**
  * Methods that define standard views of data.
@@ -40,5 +46,21 @@ public class DataView {
      */
     public static String date(Sermon sermon) {
         return sermon.time.toString(USER_TIME_FORMAT);
+    }
+
+    private static final PeriodFormatter DURATION_FORMAT = new PeriodFormatterBuilder()
+            .appendHours().appendSeparator(":")
+            .minimumPrintedDigits(2).printZeroAlways()
+            .appendMinutes().appendSeparator(":")
+            .appendSeconds()
+            .toFormatter();
+    private static String printDuration(int ms) {
+        return DURATION_FORMAT.print(new Period(ms, PeriodType.time()));
+    }
+    /**
+     * Elapsed and total time of a sermon.
+     */
+    public static String elapsedAndTotal(PlaybackService.Progress progress) {
+        return printDuration(progress.position) + " / " + printDuration(progress.max);
     }
 }

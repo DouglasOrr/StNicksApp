@@ -5,6 +5,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.webkit.WebView;
 import android.widget.SeekBar;
+import android.widget.TextView;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -28,6 +29,7 @@ import uk.org.stnickschurch.stnicksapp.data.Sermon;
 
 public class PlayerActivity extends BaseActivity {
     @BindView(R.id.seekbar_player) SeekBar mSeekBar;
+    @BindView(R.id.progress_player) TextView mProgressText;
     @BindView(R.id.webview_player) WebView mBibleView;
     private PlaybackService.Event mLastEvent = PlaybackService.Event.STOP;
 
@@ -92,6 +94,7 @@ public class PlayerActivity extends BaseActivity {
                         mSeekBar.setMax(progress.max);
                         mSeekBar.setProgress(progress.position);
                         mSeekBar.setSecondaryProgress(progress.buffer);
+                        mProgressText.setText(DataView.elapsedAndTotal(progress));
                     }
                 }));
 
