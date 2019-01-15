@@ -14,6 +14,9 @@ public class AppMetadataTest {
     @Test
     public void packageName() {
         Context appContext = InstrumentationRegistry.getTargetContext();
-        assertEquals("uk.org.stnickschurch.stnicksapp", appContext.getPackageName());
+        assertEquals(BuildConfig.DEBUG
+                ? "uk.org.stnickschurch.stnicksapp.debug"
+                : "uk.org.stnickschurch.stnicksapp",
+                appContext.getPackageName());
     }
 }
