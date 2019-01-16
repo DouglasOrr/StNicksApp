@@ -25,7 +25,9 @@
     <!-- Settings -->
     <string name="title_activity_settings">Settings</string>
     <string name="sync_enabled_title">Sermon list background sync</string>
-    <string name="sync_enabled_summary">Download a list of available sermons in the background every few days (warning: may consume mobile data)</string>
+    <string name="sync_enabled_summary">Automatically download the list of sermons every few days (NOTE: may consume mobile data)</string>
+    <string name="sync_enabled_summary_on">Automatically download the list of sermons every few days (NOTE: may consume mobile data)\nLast sync: %s</string>
+    <string name="never">never</string>
     <string name="pray_title">Pray for St Nick\'s</string>
     <string name="pray_summary">Subscribe to the St Nick\'s prayer feed with PrayerMate</string>
 

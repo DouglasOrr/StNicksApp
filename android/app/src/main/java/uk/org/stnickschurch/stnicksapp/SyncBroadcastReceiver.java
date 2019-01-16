@@ -9,6 +9,8 @@ import android.content.SharedPreferences;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 
+import org.joda.time.Instant;
+
 import java.util.Random;
 
 import uk.org.stnickschurch.stnicksapp.core.Store;
@@ -17,6 +19,10 @@ import uk.org.stnickschurch.stnicksapp.core.Utility;
 public class SyncBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
+        preferences.edit()
+                .putLong("last_auto_sync", Instant.now().getMillis())
+                .apply();
         Store.SINGLETON.get(context).sync();
     }
 
