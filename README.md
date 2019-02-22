@@ -26,6 +26,8 @@ We use the following process:
 
 ### Update sermon metadata
 
+Visit the [sermon archive](https://www.stnickschurch.org.uk/sermon-archive/) & update `sermons.tsv`.
+
     cd uploader
     export AZURE_STORAGE_CONNECTION_STRING="..."
     az storage blob download -c sermons -n v1/sermons -f sermons.old.json && gzip -f sermons.old.json
