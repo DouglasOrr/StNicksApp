@@ -28,12 +28,10 @@ We use the following process:
 
 Visit the [sermon archive](https://www.stnickschurch.org.uk/sermon-archive/) & update `sermons.tsv`.
 
+    # Add the following into a file uploader/.credentials:
+    #    export AZURE_STORAGE_CONNECTION_STRING="..."
     cd uploader
-    export AZURE_STORAGE_CONNECTION_STRING="..."
-    az storage blob download -c sermons -n v1/sermons -f sermons.old.json && gzip -f sermons.old.json
-    python3 prepare.py sermons.tsv sermons.old.json.gz sermons.json.gz
-    az storage blob upload -c sermons -n "v1/archive/sermons-$(date --iso-8601)" -f sermons.json.gz --content-encoding gzip
-    az storage blob upload -c sermons -n v1/sermons -f sermons.json.gz --content-encoding gzip
+    ./upload.sh
 
 ### Update APK
 
