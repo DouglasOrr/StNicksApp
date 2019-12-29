@@ -14,8 +14,11 @@ import android.support.annotation.Nullable;
 
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.ExoPlayerFactory;
+import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
+import com.google.android.exoplayer2.source.ProgressiveMediaSource;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
@@ -158,17 +161,15 @@ public class PlaybackService extends Service {
     public static final String EXTRA_SERMON_ID = "sermon_id";
     public static final String EXTRA_SEEK_TO_POSITION = "seek_to_ms";
 
-    private ExtractorMediaSource.Factory mMediaFactory;
+    private ProgressiveMediaSource.Factory mMediaFactory;
     private ExoPlayer mPlayer;
-//    private Timer mTimer;
     private Disposable mTimer;
 
     @Override
     public void onCreate() {
         super.onCreate();
-        mPlayer = ExoPlayerFactory.newSimpleInstance(this,
-                new DefaultTrackSelector(new DefaultBandwidthMeter()));
-        mMediaFactory = new ExtractorMediaSource.Factory(
+        mPlayer = new SimpleExoPlayer.Builder(this).build();
+        mMediaFactory = new ProgressiveMediaSource.Factory(
                 new DefaultDataSourceFactory(this,
                         Util.getUserAgent(this, "stnicksapp")));
         mTimer = Observable.interval(0, Utility.getPeriodMs(getString(R.string.seekbar_refresh)), TimeUnit.MILLISECONDS)
@@ -187,6 +188,15 @@ public class PlaybackService extends Service {
                         }
                     }
                 });
+        mPlayer.addListener(new Player.EventListener() {
+            @Override
+            public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
+                // Update state when the playback ends "naturally"
+                if (playbackState == Player.STATE_ENDED) {
+                    onEvent(new Event(ACTION_STOP, null));
+                }
+            }
+        });
     }
 
     @Override
