@@ -40,7 +40,7 @@ Visit the [sermon archive](https://www.stnickschurch.org.uk/sermon-archive/) & u
    - Run `AndroidTests` & `JUnitTests`
    - Commit & push
    - _Android Studio > Build > Generate signed bundle / APK > Android App Bundle_
-   - `ls -lh android/app/release/release/app.aab`
+   - `ls -lh android/app/release/app-release.aab`
  - Release
    - `export SNCVERSION=$(date --iso-8601) && echo $SNCVERSION` - this is the version name
    - `git push origin HEAD:refs/tags/$SNCVERSION`
