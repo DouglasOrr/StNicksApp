@@ -74,8 +74,8 @@ This has the advantage of not requiring a separate web server for the sermon met
 
 Creating a storage account suitable for uploading sermon metadata, using an Azure Storage Account for Blob storage:
 
- - Name: `stnicksapp`
- - Model: `Resource manager`
+ - Name: `stnicksappDATE`
+ - Region: `UK (South)`
  - Account kind: `Blob storage`
  - Performance: `Standard`
  - Access tier: `Hot`

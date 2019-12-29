@@ -42,7 +42,7 @@
     <string name="message_sermons_refreshed">Sermons list refreshed (+%d/%d/-%d)</string>
 
     <!-- Behaviour -->
-    <string name="sermon_list">https://stnicksapp.blob.core.windows.net/sermons/v1/sermons</string>
+    <string name="sermon_list">https://stnicksapp201912.blob.core.windows.net/sermons/v1/sermons</string>
     <string name="calendar_link">https://calendar.google.com/calendar/embed?mode=AGENDA&amp;wkst=1&amp;src=snca.co.uk_clg8mbl9238h3v09saktv2fufg%40group.calendar.google.com</string>
     <string name="pray_link">http://praynow4.org/stnicks</string>
     <string name="bible_html_header"><![CDATA[
